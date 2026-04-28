@@ -1,0 +1,11 @@
+Flask
+Flask-SQLAlchemy
+Flask-Migrate
+Flask-WTF
+Flask-Login
+psycopg2-binary
+python-dotenv
+gunicorn
+pytest
+pytest-cov
+pip-audit
