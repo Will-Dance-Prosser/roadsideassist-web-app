@@ -3,7 +3,7 @@ from flask import Flask
 from app.extensions import csrf, db, migrate
 from config import Config
 
-# create and config for Flask app
+# create and config for Flask app - keeps things testable and avoids circular imports
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
@@ -13,7 +13,7 @@ def create_app(config_class=Config):
 
     return app
 
-#connects Flask extensions to app
+#connects Flask extensions to app (after it exists)
 def register_extensions(app):
 
     db.init_app(app)
@@ -26,5 +26,6 @@ def register_extensions(app):
 
 def register_blueprints(app):
 
+     # Import inside the function to avoid circular imports
     from app.dashboard.routes import dashboard_bp
     app.register_blueprint(dashboard_bp)

@@ -1,8 +1,139 @@
+*, *::before, *::after { box-sizing: border-box; }
+
 body {
-  background: #f3f6fa;
+  margin: 0;
+  font-family: system-ui, "Segoe UI", sans-serif;
+  background: #f0f2f5;
   color: #111827;
 }
 
-a {
-  text-decoration: none;
+/* ── Shell layout ── */
+.ra-shell {
+  min-height: 100vh;
 }
+
+/* ── Sidebar ── */
+.ra-sidebar {
+  width: 230px;
+  min-height: 100vh;
+  background: #0f172a;
+  color: #e2e8f0;
+  flex-shrink: 0;
+}
+
+.ra-sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1.2rem 1rem;
+  border-bottom: 1px solid #1e293b;
+}
+
+.ra-logo-badge {
+  background: #fbbf24;
+  color: #111827;
+  font-weight: 700;
+  font-size: 0.8rem;
+  padding: 0.25rem 0.45rem;
+  border-radius: 6px;
+  letter-spacing: 0.05em;
+}
+
+.ra-logo-text {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #f1f5f9;
+}
+
+/* ── Sidebar nav ── */
+.ra-nav {
+  padding: 0.75rem 0;
+}
+
+.ra-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.6rem 1rem;
+  color: #94a3b8;
+  text-decoration: none;
+  font-size: 0.9rem;
+  border-left: 3px solid transparent;
+  transition: background 0.15s, color 0.15s;
+  cursor: pointer;
+}
+
+.ra-nav-link:hover:not(.disabled) {
+  background: #1e293b;
+  color: #f1f5f9;
+}
+
+.ra-nav-link.active {
+  background: #1e293b;
+  color: #fbbf24;
+  border-left-color: #fbbf24;
+}
+
+.ra-nav-link.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.ra-nav-link .bi {
+  font-size: 1rem;
+}
+
+/* ── Top bar ── */
+.ra-topbar {
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 0.65rem 1.25rem;
+  min-height: 56px;
+}
+
+.ra-search {
+  max-width: 280px;
+}
+
+/* ── Main area ── */
+.ra-main {
+  min-height: 0;
+}
+
+/* ── Summary cards ── */
+.ra-summary-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+}
+
+.ra-card-icon {
+  font-size: 1.6rem;
+  opacity: 0.85;
+}
+
+.ra-card-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.ra-card-label {
+  font-size: 0.8rem;
+  color: #6b7280;
+  margin-top: 0.1rem;
+}
+
+.ra-card-yellow .ra-card-icon { color: #fbbf24; }
+.ra-card-green  .ra-card-icon { color: #22c55e; }
+.ra-card-amber  .ra-card-icon { color: #f59e0b; }
+.ra-card-grey   .ra-card-icon { color: #9ca3af; }
+
+/* ── Case ID link style ── */
+.ra-case-id { color: #111827; }
+
+/* ── Status badges ── */
+.ra-badge-open     { background: #e5e7eb; color: #374151; }
+.ra-badge-assigned { background: #fef9c3; color: #854d0e; }
+.ra-badge-enroute  { background: #fbbf24; color: #111827; }
+.ra-badge-onscene  { background: #bbf7d0; color: #14532d; }
+.ra-badge-resolved { background: #dcfce7; color: #166534; }

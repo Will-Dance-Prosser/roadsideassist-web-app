@@ -1,1 +1,1 @@
-console.log("RoadsideAssist frontend loaded");
+// RoadsideAssist — frontend entry point
