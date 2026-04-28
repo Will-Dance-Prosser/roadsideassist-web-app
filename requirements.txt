@@ -3,9 +3,9 @@ Flask-SQLAlchemy
 Flask-Migrate
 Flask-WTF
 Flask-Login
-psycopg2-binary
 python-dotenv
 gunicorn
+psycopg2-binary
 pytest
 pytest-cov
 pip-audit
