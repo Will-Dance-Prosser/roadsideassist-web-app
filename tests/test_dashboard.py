@@ -1,8 +1,9 @@
 from app import create_app
+from config import TestingConfig
+
 
 def test_dashboard_page_loads():
-    app = create_app()
-    app.config.update(TESTING=True)
+    app = create_app(TestingConfig)
 
     client = app.test_client()
     response = client.get("/")
