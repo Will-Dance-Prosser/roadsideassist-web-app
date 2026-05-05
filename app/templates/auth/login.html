@@ -21,35 +21,27 @@
 
       <h1 class="h5 fw-semibold mb-4 text-center">Sign in</h1>
 
-      <form method="POST" action="#">
-        <input type="hidden" name="csrf_token" value="">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }} py-2 small" role="alert">{{ message }}</div>
+        {% endfor %}
+      {% endwith %}
+
+      <form method="POST" action="{{ url_for('auth.login') }}">
+        {{ form.hidden_tag() }}
 
         <div class="mb-3">
-          <label for="username" class="form-label">Username</label>
-          <input
-            type="text"
-            class="form-control"
-            id="username"
-            name="username"
-            autocomplete="username"
-            required
-          >
+          {{ form.username.label(class="form-label") }}
+          {{ form.username(class="form-control", autocomplete="username") }}
         </div>
 
         <div class="mb-4">
-          <label for="password" class="form-label">Password</label>
-          <input
-            type="password"
-            class="form-control"
-            id="password"
-            name="password"
-            autocomplete="current-password"
-            required
-          >
+          {{ form.password.label(class="form-label") }}
+          {{ form.password(class="form-control", autocomplete="current-password") }}
         </div>
 
         <div class="d-grid">
-          <button type="submit" class="btn ra-btn-primary">Sign in</button>
+          {{ form.submit(class="btn ra-btn-primary") }}
         </div>
       </form>
 

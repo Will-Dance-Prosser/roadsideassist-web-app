@@ -10,6 +10,7 @@ def create_app(config_class=Config):
 
     register_extensions(app)
     register_blueprints(app)
+    register_commands(app)
 
     return app
 
@@ -19,6 +20,7 @@ def register_extensions(app):
     db.init_app(app)
     migrate.init_app(app, db)
     csrf.init_app(app)
+
     login_manager.init_app(app)
     login_manager.login_view = "auth.login"
 
@@ -36,3 +38,8 @@ def register_blueprints(app):
 
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(auth_bp)
+
+
+def register_commands(app):
+    from app.commands import seed_demo_users
+    app.cli.add_command(seed_demo_users)
