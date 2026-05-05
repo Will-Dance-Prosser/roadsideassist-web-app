@@ -1,1 +1,1 @@
-// RoadsideAssist — frontend entry point
+// Shared frontend behaviour will be added as the interface becomes interactive.

@@ -1,6 +1,6 @@
 from flask import Flask
 
-from app.extensions import csrf, db, migrate
+from app.extensions import csrf, db, login_manager, migrate
 from config import Config
 
 # create and config for Flask app - keeps things testable and avoids circular imports
@@ -10,6 +10,7 @@ def create_app(config_class=Config):
 
     register_extensions(app)
     register_blueprints(app)
+    register_commands(app)
 
     return app
 
@@ -20,12 +21,25 @@ def register_extensions(app):
     migrate.init_app(app, db)
     csrf.init_app(app)
 
+    login_manager.init_app(app)
+    login_manager.login_view = "auth.login"
+
+    # Import models here so Flask-Migrate can detect them
+    from app import models  # noqa: F401
+
 
 
 
 
 def register_blueprints(app):
-
      # Import inside the function to avoid circular imports
     from app.dashboard.routes import dashboard_bp
+    from app.auth.routes import auth_bp
+
     app.register_blueprint(dashboard_bp)
+    app.register_blueprint(auth_bp)
+
+
+def register_commands(app):
+    from app.commands import seed_demo_users
+    app.cli.add_command(seed_demo_users)

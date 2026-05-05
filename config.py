@@ -7,9 +7,15 @@ class Config:
 
     SQLALCHEMY_DATABASE_URI = os.environ.get(
         "DATABASE_URL",
-        "sqlite:///roadsideassist-dev.db",
+        "sqlite:///membermatch-dev.db",
     )
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-#temp SQLlite for local dev, will move to postgres when hosted on Railway
+
+class TestingConfig(Config):
+    """Configuration used by pytest — in-memory database, CSRF disabled."""
+
+    TESTING = True
+    SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
+    WTF_CSRF_ENABLED = False

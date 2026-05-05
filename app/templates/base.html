@@ -61,6 +61,10 @@
             placeholder="Search records, candidates…"
             disabled
           >
+          <div class="ms-auto d-flex align-items-center gap-2">
+            <span class="text-muted small">{{ current_user.username }}</span>
+            <a href="{{ url_for('auth.logout') }}" class="btn btn-sm ra-btn-outline">Sign out</a>
+          </div>
         </header>
 
         <!-- Page body -->
