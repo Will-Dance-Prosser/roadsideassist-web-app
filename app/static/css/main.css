@@ -163,3 +163,15 @@ body {
   background: #f59e0b;
   color: #111827;
 }
+
+.ra-btn-outline {
+  border: 1px solid #d1d5db;
+  background: transparent;
+  color: #374151;
+  font-size: 0.8rem;
+}
+
+.ra-btn-outline:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
