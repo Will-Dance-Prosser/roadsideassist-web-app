@@ -8,4 +8,5 @@ def test_dashboard_page_loads():
     response = client.get("/")
 
     assert response.status_code == 200
-    assert b"Dispatcher Dashboard" in response.data
+    assert b"MemberMatch" in response.data
+    assert b"Match Review Dashboard" in response.data

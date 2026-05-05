@@ -1,10 +1,12 @@
-# RoadsideAssist
+# MemberMatch
 
-RoadsideAssist is a secure breakdown case management web application developed for the Software Engineering and DevOps Level 6 module.
+MemberMatch is a simulated Master Data Management (MDM) match-and-merge portal developed for the Software Engineering and DevOps Level 6 module.
 
-The application is a fictional and anonymised system inspired by roadside breakdown case handling. It uses simulated customers, vehicles, patrols and case locations only. No real customer, colleague or operational data is used.
+The application is designed to support a fictional data stewardship workflow. It will allow users to review potential duplicate member records from multiple fictional source systems, approve or reject match candidates, and maintain trusted golden records.
 
-## Planned Technology Stack
+All records, source systems, match candidates and user accounts are fictional and created for demonstration purposes only. No real customer, colleague, operational or live system data is used.
+
+## Technology Stack
 
 - Python
 - Flask
@@ -22,29 +24,34 @@ The application is a fictional and anonymised system inspired by roadside breakd
 
 - Secure login and logout
 - Role-based access control
-- Dispatcher dashboard
-- Breakdown case creation, viewing, editing and deletion
-- Customer and vehicle records
-- Patrol assignment and simulated map view
-- Audit logging
+- Dashboard showing match-review activity
+- Source record browsing and management
+- Match candidate queue with approve/reject workflow
+- Golden record creation and management
+- Configurable matching rules
+- Audit logging for merge decisions and administrative changes
 - Admin user management
 - Form validation and user feedback
 - OWASP Top 10 security evidence
 
-## User Roles
+## Planned User Roles
 
-- Administrator: manages users, settings and audit records
-- Dispatcher: creates and assigns breakdown cases
-- Patrol: views and updates assigned cases
+- Administrator: manages users, data sources, matching rules and audit records
+- Data Steward: reviews match candidates and approves or rejects proposed merges
+- Data Analyst: views source records, match candidates and golden records but cannot approve merges
 
 ## Development Status
 
-Project setup and planning stage.
+Project has been re-scoped and the initial Flask layout is in place. Core MDM features have not yet been implemented.
 
 ## Security and Privacy Notice
 
-This project uses fictional demonstration data only. It must not contain real AA customer data, colleague data, vehicle data, breakdown incidents or operational locations.
+This project uses fictional demonstration data only. It must not contain real customer records, personal data, colleague data, operational data or live system data.
 
 ## Local Development
 
-Setup instructions will be added once the application skeleton is implemented.
+```bash
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+python run.py

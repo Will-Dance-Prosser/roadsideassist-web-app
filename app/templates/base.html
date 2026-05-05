@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% block title %}RoadsideAssist{% endblock %}</title>
+    <title>{% block title %}MemberMatch{% endblock %}</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
@@ -16,8 +16,8 @@
       <!-- Left sidebar -->
       <aside class="ra-sidebar d-flex flex-column">
         <div class="ra-sidebar-header">
-          <span class="ra-logo-badge">RA</span>
-          <span class="ra-logo-text">RoadsideAssist</span>
+          <span class="ra-logo-badge">MM</span>
+          <span class="ra-logo-text">MemberMatch</span>
         </div>
 
         <nav class="ra-nav flex-grow-1">
@@ -31,12 +31,13 @@
             </li>
 
             {% for label, icon in [
-                ('Cases',      'bi-folder2-open'),
-                ('Customers',  'bi-people'),
-                ('Vehicles',   'bi-car-front'),
-                ('Patrols',    'bi-person-badge'),
-                ('Reports',    'bi-bar-chart-line'),
-                ('Audit Log',  'bi-journal-text')
+                ('Source Records',  'bi-database'),
+                ('Match Queue',     'bi-intersect'),
+                ('Golden Records',  'bi-star'),
+                ('Data Sources',    'bi-hdd-stack'),
+                ('Rules',           'bi-sliders'),
+                ('Reports',         'bi-bar-chart-line'),
+                ('Audit Log',       'bi-journal-text')
             ] %}
             <li>
               <span class="ra-nav-link disabled">
@@ -57,7 +58,7 @@
           <input
             type="search"
             class="form-control form-control-sm ra-search"
-            placeholder="Search cases, customers…"
+            placeholder="Search records, candidates…"
             disabled
           >
         </header>

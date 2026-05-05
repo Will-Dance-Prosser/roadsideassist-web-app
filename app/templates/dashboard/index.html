@@ -1,21 +1,21 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard | RoadsideAssist{% endblock %}
+{% block title %}Dashboard | MemberMatch{% endblock %}
 
 {% block content %}
 
   <div class="mb-4">
-    <h1 class="h4 mb-0 fw-semibold">Dispatcher Dashboard</h1>
-    <p class="text-muted small mt-1 mb-0">Overview of active cases and patrol status</p>
+    <h1 class="h4 mb-0 fw-semibold">Match Review Dashboard</h1>
+    <p class="text-muted small mt-1 mb-0">Overview of match candidates and golden record status</p>
   </div>
 
   <!-- Summary cards -->
   <div class="row g-3 mb-4">
     {% for card in [
-        ('Open Cases',            '12', 'bi-folder2-open',   'ra-card-yellow'),
-        ('Patrols Active',        '5',  'bi-person-badge',   'ra-card-green'),
-        ('Awaiting Assignment',   '3',  'bi-clock-history',  'ra-card-amber'),
-        ('Resolved Today',        '8',  'bi-check-circle',   'ra-card-grey')
+        ('Pending Review',    '14', 'bi-hourglass-split',  'ra-card-amber'),
+        ('Strong Matches',    '6',  'bi-intersect',        'ra-card-yellow'),
+        ('Golden Records',    '31', 'bi-star',             'ra-card-green'),
+        ('Rejected Matches',  '5',  'bi-x-circle',         'ra-card-grey')
     ] %}
     <div class="col-sm-6 col-xl-3">
       <div class="ra-summary-card {{ card[3] }} d-flex align-items-center gap-3 p-3 rounded-3">
@@ -29,52 +29,50 @@
     {% endfor %}
   </div>
 
-  <!-- Recent cases table -->
+  <!-- Recent match candidates table -->
   <div class="card border-0 shadow-sm">
     <div class="card-header bg-white border-bottom">
-      <span class="fw-semibold">Recent Cases</span>
+      <span class="fw-semibold">Recent Match Candidates</span>
     </div>
     <div class="card-body p-0">
       <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
           <thead class="table-light">
             <tr>
-              <th scope="col">Case ID</th>
-              <th scope="col">Customer</th>
-              <th scope="col">Vehicle</th>
-              <th scope="col">Location</th>
+              <th scope="col">Candidate ID</th>
+              <th scope="col">Source A</th>
+              <th scope="col">Source B</th>
+              <th scope="col">Match Score</th>
               <th scope="col">Status</th>
-              <th scope="col">Patrol</th>
             </tr>
           </thead>
           <tbody>
-            {% set demo_cases = [
-              ('RA-1041', 'J. Smith',   'Ford Focus – AB12 CDE',    'M25 J10, Surrey',          'En Route',  'Unit 4'),
-              ('RA-1040', 'P. Patel',   'VW Golf – XY34 FGH',       'A1 near Hatfield, Herts',  'Open',      '—'),
-              ('RA-1039', 'C. Johnson', 'BMW 3 – LM56 NOP',         'B4040, Oxfordshire',       'Resolved',  'Unit 2'),
-              ('RA-1038', 'S. Ahmed',   'Toyota Yaris – QR78 STU',  'A303, Wiltshire',          'On Scene',  'Unit 7'),
-              ('RA-1037', 'L. Williams','Vauxhall Astra – VW90 XYZ','M6 J14, Staffs',           'Resolved',  'Unit 1'),
+            {% set candidates = [
+              ('MC-0051', 'CRM – John A. Smith',     'ERP – J. Smith',          '96%', 'Pending Review'),
+              ('MC-0050', 'CRM – Patricia Patel',    'LEGACY – P. Patel',       '91%', 'Approved'),
+              ('MC-0049', 'ERP – C. Johnson',        'CRM – Charles Johnson',   '88%', 'Pending Review'),
+              ('MC-0048', 'LEGACY – Sara Ahmed',     'CRM – S. Ahmed',          '74%', 'Rejected'),
+              ('MC-0047', 'ERP – L. Williams',       'LEGACY – Laura Williams', '95%', 'Approved'),
             ] %}
-            {% for case in demo_cases %}
+            {% for c in candidates %}
             <tr>
-              <td><span class="ra-case-id fw-medium">{{ case[0] }}</span></td>
-              <td>{{ case[1] }}</td>
-              <td class="text-muted small">{{ case[2] }}</td>
-              <td class="text-muted small">{{ case[3] }}</td>
+              <td><span class="ra-case-id fw-medium">{{ c[0] }}</span></td>
+              <td class="small">{{ c[1] }}</td>
+              <td class="small">{{ c[2] }}</td>
               <td>
-                {% if case[4] == 'Open' %}
-                  <span class="badge ra-badge-open">Open</span>
-                {% elif case[4] == 'Assigned' %}
-                  <span class="badge ra-badge-assigned">Assigned</span>
-                {% elif case[4] == 'En Route' %}
-                  <span class="badge ra-badge-enroute">En Route</span>
-                {% elif case[4] == 'On Scene' %}
-                  <span class="badge ra-badge-onscene">On Scene</span>
+                <span class="fw-medium {% if c[3]|int >= 90 %}text-success{% elif c[3]|int >= 75 %}text-warning{% else %}text-danger{% endif %}">
+                  {{ c[3] }}
+                </span>
+              </td>
+              <td>
+                {% if c[4] == 'Pending Review' %}
+                  <span class="badge ra-badge-open">Pending Review</span>
+                {% elif c[4] == 'Approved' %}
+                  <span class="badge ra-badge-resolved">Approved</span>
                 {% else %}
-                  <span class="badge ra-badge-resolved">Resolved</span>
+                  <span class="badge ra-badge-assigned">Rejected</span>
                 {% endif %}
               </td>
-              <td>{{ case[5] }}</td>
             </tr>
             {% endfor %}
           </tbody>
