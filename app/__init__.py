@@ -25,7 +25,9 @@ def register_extensions(app):
 
 
 def register_blueprints(app):
-
      # Import inside the function to avoid circular imports
     from app.dashboard.routes import dashboard_bp
+    from app.auth.routes import auth_bp
+
     app.register_blueprint(dashboard_bp)
+    app.register_blueprint(auth_bp)
