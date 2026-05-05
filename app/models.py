@@ -18,15 +18,15 @@ class User(UserMixin, db.Model):
     # Allowed role values: administrator, data_steward, data_analyst
 
     def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
+        self.password_hash = generate_password_hash(password) #Hash using salt for no repeated hashes
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
     def __repr__(self):
-        return f"<User {self.username} ({self.role})>"
+        return f"<User {self.username} ({self.role})>" # debug/logging
 
 
-@login_manager.user_loader
+@login_manager.user_loader # Reloads user from DB on each request using session cookie
 def load_user(user_id):
-    return db.session.get(User, int(user_id))
+    return db.session.get(User, int(user_id)) # check user table/ convert to id int

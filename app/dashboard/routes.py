@@ -4,7 +4,7 @@ from flask_login import login_required
 dashboard_bp = Blueprint("dashboard", __name__)
 
 
-@dashboard_bp.route("/", methods=["GET"])
+@dashboard_bp.route("/", methods=["GET"])# shows dashboard if user is logged in
 @login_required
 def index():
     return render_template("dashboard/index.html")
