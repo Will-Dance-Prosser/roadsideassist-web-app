@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}403 Forbidden | MemberMatch{% endblock %}
+
+{% block content %}
+
+  <div class="mb-4">
+    <h1 class="h4 mb-0 fw-semibold">Access Denied</h1>
+    <p class="text-muted small mt-1 mb-0">You do not have permission to view this page</p>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-4 text-center">
+      <i class="bi bi-lock fs-1 text-muted mb-3 d-block"></i>
+      <p class="mb-1 fw-semibold">403 – Forbidden</p>
+      <p class="text-muted small mb-3">Your account does not have the required role to access this area.</p>
+      <a href="{{ url_for('dashboard.index') }}" class="btn btn-sm ra-btn-outline">Back to Dashboard</a>
+    </div>
+  </div>
+
+{% endblock %}

@@ -35,7 +35,6 @@
                 ('Match Queue',     'bi-intersect'),
                 ('Golden Records',  'bi-star'),
                 ('Data Sources',    'bi-hdd-stack'),
-                ('Rules',           'bi-sliders'),
                 ('Reports',         'bi-bar-chart-line'),
                 ('Audit Log',       'bi-journal-text')
             ] %}
@@ -46,6 +45,16 @@
               </span>
             </li>
             {% endfor %}
+
+            {% if current_user.is_authenticated and current_user.role == 'administrator' %}
+            <li>
+              <a href="{{ url_for('rules.index') }}"
+                 class="ra-nav-link {% if request.endpoint == 'rules.index' %}active{% endif %}">
+                <i class="bi bi-sliders"></i>
+                <span>Rules</span>
+              </a>
+            </li>
+            {% endif %}
           </ul>
         </nav>
       </aside>

@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, render_template
 
 from app.extensions import csrf, db, login_manager, migrate
 from config import Config
@@ -35,10 +35,16 @@ def register_blueprints(app):
      # Import inside the function to avoid circular imports
     from app.dashboard.routes import dashboard_bp
     from app.auth.routes import auth_bp
+    from app.rules.routes import rules_bp
+
 
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(auth_bp)
+    app.register_blueprint(rules_bp)
 
+    @app.errorhandler(403)
+    def forbidden(e):
+        return render_template("errors/403.html"), 403    
 
 def register_commands(app):
     from app.commands import seed_demo_users
