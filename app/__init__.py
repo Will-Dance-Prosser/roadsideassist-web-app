@@ -36,11 +36,14 @@ def register_blueprints(app):
     from app.dashboard.routes import dashboard_bp
     from app.auth.routes import auth_bp
     from app.rules.routes import rules_bp
-
+    from app.source_records.routes import source_records_bp
+    from app.match_queue.routes import match_queue_bp
 
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(rules_bp)
+    app.register_blueprint(source_records_bp)
+    app.register_blueprint(match_queue_bp)
 
     @app.errorhandler(403)
     def forbidden(e):

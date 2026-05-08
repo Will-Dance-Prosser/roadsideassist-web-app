@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Source Records | MemberMatch{% endblock %}
+
+{% block content %}
+
+  <div class="mb-4">
+    <h1 class="h4 mb-0 fw-semibold">Source Records</h1>
+    <p class="text-muted small mt-1 mb-0">All member records loaded from connected source systems</p>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-bottom d-flex align-items-center justify-content-between">
+      <span class="fw-semibold">All Records</span>
+      <span class="text-muted small">{{ records|length }} record{{ 's' if records|length != 1 }}</span>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th scope="col">External ID</th>
+              <th scope="col">Full Name</th>
+              <th scope="col">Source System</th>
+              <th scope="col">Email</th>
+              <th scope="col">Postcode</th>
+              <th scope="col">Phone</th>
+              <th scope="col">Status</th>
+              <th scope="col">Created</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for record in records %}
+            <tr>
+              <td><span class="ra-case-id fw-medium">{{ record.external_id }}</span></td>
+              <td class="small">{{ record.first_name or '' }} {{ record.last_name or '' }}</td>
+              <td class="small">{{ record.source_system.name }}</td>
+              <td class="small">{{ record.email or '—' }}</td>
+              <td class="small">{{ record.postcode or '—' }}</td>
+              <td class="small">{{ record.phone or '—' }}</td>
+              <td>
+                {% if record.is_archived %}
+                  <span class="badge bg-secondary">Archived</span>
+                {% else %}
+                  <span class="badge bg-success">Active</span>
+                {% endif %}
+              </td>
+              <td class="small text-muted">{{ record.created_at.strftime('%d %b %Y') }}</td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="8" class="text-center text-muted small py-4">No source records found.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+{% endblock %}

@@ -30,13 +30,11 @@
               </a>
             </li>
 
-            {% for label, icon in [
-                ('Source Records',  'bi-database'),
-                ('Match Queue',     'bi-intersect'),
-                ('Golden Records',  'bi-star'),
-                ('Data Sources',    'bi-hdd-stack'),
-                ('Reports',         'bi-bar-chart-line'),
-                ('Audit Log',       'bi-journal-text')
+            {% for label, icon, endpoint in [
+                ('Golden Records',  'bi-star',           ''),
+                ('Data Sources',    'bi-hdd-stack',      ''),
+                ('Reports',         'bi-bar-chart-line', ''),
+                ('Audit Log',       'bi-journal-text',   '')
             ] %}
             <li>
               <span class="ra-nav-link disabled">
@@ -45,6 +43,22 @@
               </span>
             </li>
             {% endfor %}
+
+            <li>
+              <a href="{{ url_for('source_records.index') }}"
+                 class="ra-nav-link {% if request.endpoint == 'source_records.index' %}active{% endif %}">
+                <i class="bi bi-database"></i>
+                <span>Source Records</span>
+              </a>
+            </li>
+
+            <li>
+              <a href="{{ url_for('match_queue.index') }}"
+                 class="ra-nav-link {% if request.endpoint == 'match_queue.index' %}active{% endif %}">
+                <i class="bi bi-intersect"></i>
+                <span>Match Queue</span>
+              </a>
+            </li>
 
             {% if current_user.is_authenticated and current_user.role == 'administrator' %}
             <li>

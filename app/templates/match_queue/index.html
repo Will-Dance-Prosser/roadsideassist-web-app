@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Match Queue | MemberMatch{% endblock %}
+
+{% block content %}
+
+  <div class="mb-4">
+    <h1 class="h4 mb-0 fw-semibold">Match Queue</h1>
+    <p class="text-muted small mt-1 mb-0">Pending match candidates awaiting review</p>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-bottom d-flex align-items-center justify-content-between">
+      <span class="fw-semibold">Pending Candidates</span>
+      <span class="text-muted small">{{ candidates|length }} candidate{{ 's' if candidates|length != 1 }}</span>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th scope="col">ID</th>
+              <th scope="col">Record A</th>
+              <th scope="col">Record B</th>
+              <th scope="col">Match Score</th>
+              <th scope="col">Status</th>
+              <th scope="col">Created</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in candidates %}
+            <tr>
+              <td><span class="ra-case-id fw-medium">MC-{{ '%04d' % c.id }}</span></td>
+              <td class="small">
+                {{ c.record_a.first_name or '' }} {{ c.record_a.last_name or '' }}
+                <span class="text-muted">({{ c.record_a.source_system.name }})</span>
+              </td>
+              <td class="small">
+                {{ c.record_b.first_name or '' }} {{ c.record_b.last_name or '' }}
+                <span class="text-muted">({{ c.record_b.source_system.name }})</span>
+              </td>
+              <td>
+                <span class="fw-medium">{{ (c.match_score * 100) | round | int }}%</span>
+              </td>
+              <td>
+                <span class="badge bg-warning text-dark">Pending</span>
+              </td>
+              <td class="small text-muted">{{ c.created_at.strftime('%d %b %Y') }}</td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="6" class="text-center text-muted small py-4">No pending match candidates.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+{% endblock %}
