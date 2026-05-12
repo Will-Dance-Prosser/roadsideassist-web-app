@@ -1,0 +1,189 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Page-1" id="B8bQoOiQFDvvkW4hzESB">
+    <mxGraphModel dx="1570" dy="883" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="mSegLsYGIL4azj17Wddn-1" parent="1" style="whiteSpace=wrap;strokeWidth=2;" value="Local development in VS Code" vertex="1">
+          <mxGeometry height="78" width="260" x="103" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="mSegLsYGIL4azj17Wddn-2" parent="1" style="whiteSpace=wrap;strokeWidth=2;" value="Work on dev branch" vertex="1">
+          <mxGeometry height="54" width="202" x="131.5" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="mSegLsYGIL4azj17Wddn-3" parent="1" style="whiteSpace=wrap;strokeWidth=2;" value="Commit focused change" vertex="1">
+          <mxGeometry height="54" width="231" x="117.5" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="mSegLsYGIL4azj17Wddn-4" parent="1" style="whiteSpace=wrap;strokeWidth=2;" value="Push dev branch to GitHub" vertex="1">
+          <mxGeometry height="54" width="251" x="27" y="280" as="geometry" />
+        </mxCell>
+        <mxCell id="mSegLsYGIL4azj17Wddn-5" parent="1" style="whiteSpace=wrap;strokeWidth=2;" value="GitHub Actions triggered" vertex="1">
+          <mxGeometry height="54" width="236" x="34.5" y="360" as="geometry" />
+        </mxCell>
+        <mxCell id="mSegLsYGIL4azj17Wddn-6" parent="1" style="whiteSpace=wrap;strokeWidth=2;" value="Set up Python environment" vertex="1">
+          <mxGeometry height="54" width="255" x="25" y="440" as="geometry" />
+        </mxCell>
+        <mxCell id="mSegLsYGIL4azj17Wddn-7" parent="1" style="whiteSpace=wrap;strokeWidth=2;" value="Install dependencies from requirements.txt" vertex="1">
+          <mxGeometry height="78" width="260" x="22.5" y="520" as="geometry" />
+        </mxCell>
+        <mxCell id="mSegLsYGIL4azj17Wddn-8" parent="1" style="whiteSpace=wrap;strokeWidth=2;" value="Run pytest test suite" vertex="1">
+          <mxGeometry height="54" width="208" x="48.5" y="620" as="geometry" />
+        </mxCell>
+        <mxCell id="mSegLsYGIL4azj17Wddn-9" parent="1" style="rhombus;strokeWidth=2;whiteSpace=wrap;" value="Do tests pass?" vertex="1">
+          <mxGeometry height="153" width="153" x="76" y="700" as="geometry" />
+        </mxCell>
+        <mxCell id="mSegLsYGIL4azj17Wddn-10" parent="1" style="whiteSpace=wrap;strokeWidth=2;" value="Review CI logs" vertex="1">
+          <mxGeometry height="54" width="162" x="48.5" y="1200" as="geometry" />
+        </mxCell>
+        <mxCell id="mSegLsYGIL4azj17Wddn-11" parent="1" style="whiteSpace=wrap;strokeWidth=2;" value="Fix issue locally" vertex="1">
+          <mxGeometry height="54" width="173" x="252.5" y="1320" as="geometry" />
+        </mxCell>
+        <mxCell id="mSegLsYGIL4azj17Wddn-12" parent="1" style="whiteSpace=wrap;strokeWidth=2;" value="Open Pull Request&#xa;dev to main" vertex="1">
+          <mxGeometry height="78" width="191" x="244" y="890" as="geometry" />
+        </mxCell>
+        <mxCell id="mSegLsYGIL4azj17Wddn-13" parent="1" style="whiteSpace=wrap;strokeWidth=2;" value="Review changes, tests and evidence" vertex="1">
+          <mxGeometry height="78" width="260" x="209.5" y="990" as="geometry" />
+        </mxCell>
+        <mxCell id="mSegLsYGIL4azj17Wddn-14" parent="1" style="rhombus;strokeWidth=2;whiteSpace=wrap;" value="Ready to merge?" vertex="1">
+          <mxGeometry height="172" width="172" x="253" y="1100" as="geometry" />
+        </mxCell>
+        <mxCell id="mSegLsYGIL4azj17Wddn-15" parent="1" style="whiteSpace=wrap;strokeWidth=2;" value="Merge into main" vertex="1">
+          <mxGeometry height="54" width="176" x="530" y="1266" as="geometry" />
+        </mxCell>
+        <mxCell id="mSegLsYGIL4azj17Wddn-16" parent="1" style="whiteSpace=wrap;strokeWidth=2;" value="main branch remains stable" vertex="1">
+          <mxGeometry height="54" width="258" x="489" y="1340" as="geometry" />
+        </mxCell>
+        <mxCell id="mSegLsYGIL4azj17Wddn-17" parent="1" style="whiteSpace=wrap;strokeWidth=2;" value="Railway deploys from main" vertex="1">
+          <mxGeometry height="78" width="260" x="489" y="1420" as="geometry" />
+        </mxCell>
+        <mxCell id="mSegLsYGIL4azj17Wddn-18" parent="1" style="whiteSpace=wrap;strokeWidth=2;" value="Run Flask app with Gunicorn" vertex="1">
+          <mxGeometry height="78" width="260" x="489" y="1520" as="geometry" />
+        </mxCell>
+        <mxCell id="mSegLsYGIL4azj17Wddn-19" parent="1" style="whiteSpace=wrap;strokeWidth=2;" value="Connect to Railway PostgreSQL" vertex="1">
+          <mxGeometry height="78" width="260" x="489" y="1620" as="geometry" />
+        </mxCell>
+        <mxCell id="mSegLsYGIL4azj17Wddn-20" parent="1" style="whiteSpace=wrap;strokeWidth=2;" value="Monitor deployment logs and app behaviour" vertex="1">
+          <mxGeometry height="78" width="260" x="488" y="1720" as="geometry" />
+        </mxCell>
+        <mxCell id="mSegLsYGIL4azj17Wddn-21" edge="1" parent="1" source="mSegLsYGIL4azj17Wddn-1" style="curved=1;startArrow=none;endArrow=block;exitX=0.5;exitY=1;entryX=0.5;entryY=0;rounded=0;" target="mSegLsYGIL4azj17Wddn-2" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="mSegLsYGIL4azj17Wddn-22" edge="1" parent="1" source="mSegLsYGIL4azj17Wddn-2" style="curved=1;startArrow=none;endArrow=block;exitX=0.5;exitY=1;entryX=0.5;entryY=0;rounded=0;" target="mSegLsYGIL4azj17Wddn-3" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="mSegLsYGIL4azj17Wddn-23" edge="1" parent="1" source="mSegLsYGIL4azj17Wddn-3" style="curved=1;startArrow=none;endArrow=block;exitX=0.31;exitY=1;entryX=0.5;entryY=0;rounded=0;" target="mSegLsYGIL4azj17Wddn-4" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="160" y="260" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="mSegLsYGIL4azj17Wddn-24" edge="1" parent="1" source="mSegLsYGIL4azj17Wddn-4" style="curved=1;startArrow=none;endArrow=block;exitX=0.5;exitY=1;entryX=0.5;entryY=0;rounded=0;" target="mSegLsYGIL4azj17Wddn-5" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="mSegLsYGIL4azj17Wddn-25" edge="1" parent="1" source="mSegLsYGIL4azj17Wddn-5" style="curved=1;startArrow=none;endArrow=block;exitX=0.5;exitY=1;entryX=0.5;entryY=0;rounded=0;" target="mSegLsYGIL4azj17Wddn-6" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="mSegLsYGIL4azj17Wddn-26" edge="1" parent="1" source="mSegLsYGIL4azj17Wddn-6" style="curved=1;startArrow=none;endArrow=block;exitX=0.5;exitY=1;entryX=0.5;entryY=0;rounded=0;" target="mSegLsYGIL4azj17Wddn-7" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="mSegLsYGIL4azj17Wddn-27" edge="1" parent="1" source="mSegLsYGIL4azj17Wddn-7" style="curved=1;startArrow=none;endArrow=block;exitX=0.5;exitY=1;entryX=0.5;entryY=0;rounded=0;" target="mSegLsYGIL4azj17Wddn-8" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="mSegLsYGIL4azj17Wddn-28" edge="1" parent="1" source="mSegLsYGIL4azj17Wddn-8" style="curved=1;startArrow=none;endArrow=block;exitX=0.5;exitY=1;entryX=0.5;entryY=0;rounded=0;" target="mSegLsYGIL4azj17Wddn-9" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="mSegLsYGIL4azj17Wddn-29" edge="1" parent="1" source="mSegLsYGIL4azj17Wddn-9" style="curved=1;startArrow=none;endArrow=block;exitX=0.38;exitY=1;entryX=0.5;entryY=0.01;rounded=0;" target="mSegLsYGIL4azj17Wddn-10" value="No">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="124" y="1089" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="mSegLsYGIL4azj17Wddn-30" edge="1" parent="1" source="mSegLsYGIL4azj17Wddn-10" style="curved=1;startArrow=none;endArrow=block;exitX=0.5;exitY=1.01;entryX=0;entryY=0.03;rounded=0;" target="mSegLsYGIL4azj17Wddn-11" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="180" y="1330" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="mSegLsYGIL4azj17Wddn-31" edge="1" parent="1" source="mSegLsYGIL4azj17Wddn-11" style="curved=1;startArrow=none;endArrow=block;exitX=0.9;exitY=0.01;entryX=1;entryY=0.91;rounded=0;" target="mSegLsYGIL4azj17Wddn-3" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="500" y="1250" />
+              <mxPoint x="506" y="331" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="mSegLsYGIL4azj17Wddn-32" edge="1" parent="1" source="mSegLsYGIL4azj17Wddn-9" style="curved=1;startArrow=none;endArrow=block;exitX=1;exitY=0.79;entryX=0.5;entryY=0;rounded=0;" target="mSegLsYGIL4azj17Wddn-12" value="Yes">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="310" y="820" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="mSegLsYGIL4azj17Wddn-33" edge="1" parent="1" source="mSegLsYGIL4azj17Wddn-12" style="curved=1;startArrow=none;endArrow=block;exitX=0.5;exitY=1;entryX=0.5;entryY=0;rounded=0;" target="mSegLsYGIL4azj17Wddn-13" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="mSegLsYGIL4azj17Wddn-34" edge="1" parent="1" source="mSegLsYGIL4azj17Wddn-13" style="curved=1;startArrow=none;endArrow=block;exitX=0.5;exitY=1;entryX=0.5;entryY=0;rounded=0;" target="mSegLsYGIL4azj17Wddn-14" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="mSegLsYGIL4azj17Wddn-35" edge="1" parent="1" source="mSegLsYGIL4azj17Wddn-14" style="curved=1;startArrow=none;endArrow=block;exitX=0.5;exitY=1;entryX=0.5;entryY=0.01;rounded=0;" target="mSegLsYGIL4azj17Wddn-11" value="No">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="mSegLsYGIL4azj17Wddn-36" edge="1" parent="1" source="mSegLsYGIL4azj17Wddn-14" style="curved=1;startArrow=none;endArrow=block;exitX=1;exitY=0.78;entryX=0.5;entryY=0.01;rounded=0;" target="mSegLsYGIL4azj17Wddn-15" value="Yes">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="520" y="1210" />
+              <mxPoint x="600" y="1230" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="mSegLsYGIL4azj17Wddn-37" edge="1" parent="1" source="mSegLsYGIL4azj17Wddn-15" style="curved=1;startArrow=none;endArrow=block;exitX=0.5;exitY=1.01;entryX=0.5;entryY=0.01;rounded=0;" target="mSegLsYGIL4azj17Wddn-16" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="mSegLsYGIL4azj17Wddn-38" edge="1" parent="1" source="mSegLsYGIL4azj17Wddn-16" style="curved=1;startArrow=none;endArrow=block;exitX=0.5;exitY=1.01;entryX=0.5;entryY=0;rounded=0;" target="mSegLsYGIL4azj17Wddn-17" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="mSegLsYGIL4azj17Wddn-39" edge="1" parent="1" source="mSegLsYGIL4azj17Wddn-17" style="curved=1;startArrow=none;endArrow=block;exitX=0.5;exitY=1;entryX=0.5;entryY=0;rounded=0;" target="mSegLsYGIL4azj17Wddn-18" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="mSegLsYGIL4azj17Wddn-40" edge="1" parent="1" source="mSegLsYGIL4azj17Wddn-18" style="curved=1;startArrow=none;endArrow=block;exitX=0.5;exitY=1;entryX=0.5;entryY=0;rounded=0;" target="mSegLsYGIL4azj17Wddn-19" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="mSegLsYGIL4azj17Wddn-41" edge="1" parent="1" source="mSegLsYGIL4azj17Wddn-19" style="curved=1;startArrow=none;endArrow=block;exitX=0.5;exitY=1;entryX=0.5;entryY=0;rounded=0;" target="mSegLsYGIL4azj17Wddn-20" value="">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

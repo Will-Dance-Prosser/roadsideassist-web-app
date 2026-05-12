@@ -25,6 +25,7 @@
               <th scope="col">Match Score</th>
               <th scope="col">Status</th>
               <th scope="col">Created</th>
+              <th scope="col"></th>
             </tr>
           </thead>
           <tbody>
@@ -46,6 +47,7 @@
                 <span class="badge bg-warning text-dark">Pending</span>
               </td>
               <td class="small text-muted">{{ c.created_at.strftime('%d %b %Y') }}</td>
+              <td><a href="{{ url_for('match_queue.detail', id=c.id) }}" class="btn btn-sm ra-btn-outline">Review</a></td>
             </tr>
             {% else %}
             <tr>
