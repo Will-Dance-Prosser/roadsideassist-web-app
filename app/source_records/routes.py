@@ -7,8 +7,8 @@ source_records_bp = Blueprint("source_records", __name__)
 
 
 @source_records_bp.route("/source-records", methods=["GET"])
-@login_required
 @role_required("administrator", "data_steward", "data_analyst")
+@login_required
 def index():
     """List all source records ordered by most recently created."""
     records = SourceRecord.query.order_by(SourceRecord.created_at.desc()).all()
