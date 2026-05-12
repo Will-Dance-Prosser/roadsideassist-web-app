@@ -31,7 +31,6 @@
             </li>
 
             {% for label, icon, endpoint in [
-                ('Golden Records',  'bi-star',           ''),
                 ('Data Sources',    'bi-hdd-stack',      ''),
                 ('Reports',         'bi-bar-chart-line', ''),
                 ('Audit Log',       'bi-journal-text',   '')
@@ -43,6 +42,14 @@
               </span>
             </li>
             {% endfor %}
+
+            <li>
+              <a href="{{ url_for('golden_records.index') }}"
+                 class="ra-nav-link {% if request.endpoint == 'golden_records.index' %}active{% endif %}">
+                <i class="bi bi-star"></i>
+                <span>Golden Records</span>
+              </a>
+            </li>
 
             <li>
               <a href="{{ url_for('source_records.index') }}"

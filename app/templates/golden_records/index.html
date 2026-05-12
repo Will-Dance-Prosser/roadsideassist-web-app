@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Golden Records | MemberMatch{% endblock %}
+
+{% block content %}
+
+  <div class="mb-4">
+    <h1 class="h4 mb-0 fw-semibold">Golden Records</h1>
+    <p class="text-muted small mt-1 mb-0">Trusted master records created from approved match candidates</p>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-bottom d-flex align-items-center justify-content-between">
+      <span class="fw-semibold">All Golden Records</span>
+      <span class="text-muted small">{{ records|length }} record{{ 's' if records|length != 1 }}</span>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th scope="col">ID</th>
+              <th scope="col">Full Name</th>
+              <th scope="col">Email</th>
+              <th scope="col">Date of Birth</th>
+              <th scope="col">Postcode</th>
+              <th scope="col">Phone</th>
+              <th scope="col">Linked Records</th>
+              <th scope="col">Created</th>
+              <th scope="col">Updated</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for gr in records %}
+            <tr>
+              <td><span class="ra-case-id fw-medium">GR-{{ '%04d' % gr.id }}</span></td>
+              <td class="small">{{ gr.first_name or '—' }} {{ gr.last_name or '' }}</td>
+              <td class="small">{{ gr.email or '—' }}</td>
+              <td class="small">{{ gr.date_of_birth.strftime('%d %b %Y') if gr.date_of_birth else '—' }}</td>
+              <td class="small">{{ gr.postcode or '—' }}</td>
+              <td class="small">{{ gr.phone or '—' }}</td>
+              <td class="text-center">
+                <span class="badge bg-light text-dark border">{{ gr.source_links|length }}</span>
+              </td>
+              <td class="small text-muted">{{ gr.created_at.strftime('%d %b %Y') }}</td>
+              <td class="small text-muted">{{ gr.updated_at.strftime('%d %b %Y') }}</td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="9" class="text-center text-muted small py-4">No golden records found. Approve a match candidate to create one.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+{% endblock %}
