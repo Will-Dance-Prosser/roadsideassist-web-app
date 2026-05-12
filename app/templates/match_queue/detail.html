@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}MC-{{ '%04d' % candidate.id }} | MemberMatch{% endblock %}
+
+{% block content %}
+
+  <div class="mb-4">
+    <a href="{{ url_for('match_queue.index') }}" class="text-muted small text-decoration-none">
+      <i class="bi bi-arrow-left"></i> Back to Match Queue
+    </a>
+    <h1 class="h4 mb-0 fw-semibold mt-2">Match Candidate MC-{{ '%04d' % candidate.id }}</h1>
+    <p class="text-muted small mt-1 mb-0">Review the two source records identified as potential duplicates</p>
+  </div>
+
+  <!-- Candidate summary -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-bottom fw-semibold">Candidate Summary</div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-sm-3">
+          <div class="text-muted small">Match Score</div>
+          <div class="fw-semibold fs-5">{{ (candidate.match_score * 100) | round | int }}%</div>
+        </div>
+        <div class="col-sm-3">
+          <div class="text-muted small">Status</div>
+          <div>
+            {% if candidate.status == 'pending' %}
+              <span class="badge bg-warning text-dark">Pending</span>
+            {% elif candidate.status == 'approved' %}
+              <span class="badge bg-success">Approved</span>
+            {% else %}
+              <span class="badge bg-secondary">Rejected</span>
+            {% endif %}
+          </div>
+        </div>
+        <div class="col-sm-3">
+          <div class="text-muted small">Created</div>
+          <div class="small">{{ candidate.created_at.strftime('%d %b %Y') }}</div>
+        </div>
+        <div class="col-sm-3">
+          <div class="text-muted small">Reviewed</div>
+          <div class="small">{{ candidate.reviewed_at.strftime('%d %b %Y') if candidate.reviewed_at else '—' }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Side-by-side source records -->
+  <div class="row g-4">
+
+    {% for label, record in [('Record A', candidate.record_a), ('Record B', candidate.record_b)] %}
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-white border-bottom fw-semibold">
+          {{ label }}
+          <span class="text-muted fw-normal small ms-2">{{ record.source_system.name }}</span>
+        </div>
+        <div class="card-body">
+          <dl class="row mb-0 small">
+            <dt class="col-5 text-muted fw-normal">External ID</dt>
+            <dd class="col-7"><span class="ra-case-id">{{ record.external_id }}</span></dd>
+
+            <dt class="col-5 text-muted fw-normal">Full Name</dt>
+            <dd class="col-7">{{ record.first_name or '—' }} {{ record.last_name or '' }}</dd>
+
+            <dt class="col-5 text-muted fw-normal">Email</dt>
+            <dd class="col-7">{{ record.email or '—' }}</dd>
+
+            <dt class="col-5 text-muted fw-normal">Date of Birth</dt>
+            <dd class="col-7">{{ record.date_of_birth.strftime('%d %b %Y') if record.date_of_birth else '—' }}</dd>
+
+            <dt class="col-5 text-muted fw-normal">Postcode</dt>
+            <dd class="col-7">{{ record.postcode or '—' }}</dd>
+
+            <dt class="col-5 text-muted fw-normal">Phone</dt>
+            <dd class="col-7">{{ record.phone or '—' }}</dd>
+
+            <dt class="col-5 text-muted fw-normal">Source System</dt>
+            <dd class="col-7">{{ record.source_system.name }}</dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+
+  </div>
+
+{% endblock %}
