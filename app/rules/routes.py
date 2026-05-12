@@ -6,7 +6,7 @@ rules_bp = Blueprint("rules", __name__, template_folder="../templates")
 
 
 @rules_bp.route("/rules", methods=["GET"]) # returns rules page if user is logged in and matches the admin role
-@role_required("administrator")
 @login_required
+@role_required("administrator")
 def index():
     return render_template("rules/index.html")

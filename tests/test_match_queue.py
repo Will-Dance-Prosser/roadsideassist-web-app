@@ -1,7 +1,7 @@
 import pytest
 from app import create_app
 from app.extensions import db
-from app.models import MatchCandidate, SourceRecord, SourceSystem, User
+from app.models import AuditLog, GoldenRecord, GoldenRecordLink, MatchCandidate, MergeDecision, SourceRecord, SourceSystem, User
 from config import TestingConfig
 
 
@@ -151,3 +151,136 @@ def test_missing_candidate_returns_404(client, app):
     _login(client, app)
     response = client.get("/match-candidates/99999")
     assert response.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Approve / reject workflow tests
+# ---------------------------------------------------------------------------
+
+def _login_as(client, app, role):
+    """Create a user with the given role and log them in."""
+    username = f"user_{role}"
+    with app.app_context():
+        if not User.query.filter_by(username=username).first():
+            user = User(username=username, email=f"{role}@example.com", role=role)
+            user.set_password("test-password")
+            db.session.add(user)
+            db.session.commit()
+    client.post("/login", data={"username": username, "password": "test-password"}, follow_redirects=True)
+
+
+def _seed_pending_candidate(app):
+    """Seed a fresh pending candidate and return its id."""
+    with app.app_context():
+        system = SourceSystem.query.filter_by(name="CRM").first()
+        if not system:
+            system = SourceSystem(name="CRM")
+            db.session.add(system)
+            db.session.commit()
+        rec_a = SourceRecord(source_system_id=system.id, external_id="WF-001", first_name="Alice", last_name="Brown", email="alice@example.com")
+        rec_b = SourceRecord(source_system_id=system.id, external_id="WF-002", first_name="A.", last_name="Brown", email="alice@example.com")
+        db.session.add_all([rec_a, rec_b])
+        db.session.commit()
+        candidate = MatchCandidate(record_a_id=rec_a.id, record_b_id=rec_b.id, match_score=0.93, status="pending")
+        db.session.add(candidate)
+        db.session.commit()
+        return candidate.id
+
+
+def _post(client, url):
+    """Send a POST with CSRF bypassed (test client uses WTF_CSRF_ENABLED=False)."""
+    return client.post(url, follow_redirects=True)
+
+
+def test_data_steward_can_approve_pending_candidate(client, app):
+    candidate_id = _seed_pending_candidate(app)
+    _login_as(client, app, "data_steward")
+    _post(client, f"/match-candidates/{candidate_id}/approve")
+    with app.app_context():
+        c = db.session.get(MatchCandidate, candidate_id)
+        assert c.status == "approved"
+        assert c.reviewed_at is not None
+        assert c.reviewed_by_id is not None
+
+
+def test_approve_creates_merge_decision(client, app):
+    candidate_id = _seed_pending_candidate(app)
+    _login_as(client, app, "data_steward")
+    _post(client, f"/match-candidates/{candidate_id}/approve")
+    with app.app_context():
+        decision = MergeDecision.query.filter_by(candidate_id=candidate_id).first()
+        assert decision is not None
+        assert decision.decision == "approved"
+
+
+def test_approve_creates_golden_record_and_links(client, app):
+    candidate_id = _seed_pending_candidate(app)
+    _login_as(client, app, "data_steward")
+    _post(client, f"/match-candidates/{candidate_id}/approve")
+    with app.app_context():
+        assert GoldenRecord.query.count() == 1
+        assert GoldenRecordLink.query.count() == 2
+
+
+def test_approve_creates_audit_log_entry(client, app):
+    candidate_id = _seed_pending_candidate(app)
+    _login_as(client, app, "data_steward")
+    _post(client, f"/match-candidates/{candidate_id}/approve")
+    with app.app_context():
+        log = AuditLog.query.filter_by(action="match_approved").first()
+        assert log is not None
+        assert log.target_id == candidate_id
+
+
+def test_data_steward_can_reject_pending_candidate(client, app):
+    candidate_id = _seed_pending_candidate(app)
+    _login_as(client, app, "data_steward")
+    _post(client, f"/match-candidates/{candidate_id}/reject")
+    with app.app_context():
+        c = db.session.get(MatchCandidate, candidate_id)
+        assert c.status == "rejected"
+
+
+def test_reject_creates_merge_decision_and_audit_log(client, app):
+    candidate_id = _seed_pending_candidate(app)
+    _login_as(client, app, "data_steward")
+    _post(client, f"/match-candidates/{candidate_id}/reject")
+    with app.app_context():
+        decision = MergeDecision.query.filter_by(candidate_id=candidate_id).first()
+        assert decision is not None
+        assert decision.decision == "rejected"
+        log = AuditLog.query.filter_by(action="match_rejected").first()
+        assert log is not None
+
+
+def test_reject_does_not_create_golden_record(client, app):
+    candidate_id = _seed_pending_candidate(app)
+    _login_as(client, app, "data_steward")
+    _post(client, f"/match-candidates/{candidate_id}/reject")
+    with app.app_context():
+        assert GoldenRecord.query.count() == 0
+
+
+def test_data_analyst_cannot_approve_receives_403(client, app):
+    candidate_id = _seed_pending_candidate(app)
+    _login_as(client, app, "data_analyst")
+    response = client.post(f"/match-candidates/{candidate_id}/approve")
+    assert response.status_code == 403
+
+
+def test_data_analyst_cannot_reject_receives_403(client, app):
+    candidate_id = _seed_pending_candidate(app)
+    _login_as(client, app, "data_analyst")
+    response = client.post(f"/match-candidates/{candidate_id}/reject")
+    assert response.status_code == 403
+
+
+def test_already_reviewed_candidate_cannot_be_reviewed_again(client, app):
+    candidate_id = _seed_pending_candidate(app)
+    _login_as(client, app, "data_steward")
+    _post(client, f"/match-candidates/{candidate_id}/approve")
+    # Try to approve again — should flash warning, not duplicate
+    _post(client, f"/match-candidates/{candidate_id}/approve")
+    with app.app_context():
+        assert MergeDecision.query.filter_by(candidate_id=candidate_id).count() == 1
+        assert GoldenRecord.query.count() == 1

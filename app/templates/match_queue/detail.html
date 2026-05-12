@@ -12,6 +12,15 @@
     <p class="text-muted small mt-1 mb-0">Review the two source records identified as potential duplicates</p>
   </div>
 
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ 'success' if category == 'success' else 'warning' }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endwith %}
+
   <!-- Candidate summary -->
   <div class="card border-0 shadow-sm mb-4">
     <div class="card-header bg-white border-bottom fw-semibold">Candidate Summary</div>
@@ -84,5 +93,18 @@
     {% endfor %}
 
   </div>
+
+  {% if current_user.role == 'data_steward' and candidate.status == 'pending' %}
+  <div class="mt-4 d-flex gap-3">
+    <form method="POST" action="{{ url_for('match_queue.approve', id=candidate.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-success">Approve Match</button>
+    </form>
+    <form method="POST" action="{{ url_for('match_queue.reject', id=candidate.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-outline-secondary">Reject Match</button>
+    </form>
+  </div>
+  {% endif %}
 
 {% endblock %}
