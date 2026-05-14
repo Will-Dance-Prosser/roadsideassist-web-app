@@ -12,7 +12,14 @@
   <div class="card border-0 shadow-sm">
     <div class="card-header bg-white border-bottom d-flex align-items-center justify-content-between">
       <span class="fw-semibold">All Records</span>
-      <span class="text-muted small">{{ records|length }} record{{ 's' if records|length != 1 }}</span>
+      <div class="d-flex align-items-center gap-3">
+        <span class="text-muted small">{{ records|length }} record{{ 's' if records|length != 1 }}</span>
+        {% if current_user.role in ('administrator', 'data_steward') %}
+        <a href="{{ url_for('source_records.create') }}" class="btn btn-sm btn-primary">
+          <i class="bi bi-plus-lg me-1"></i>New Record
+        </a>
+        {% endif %}
+      </div>
     </div>
     <div class="card-body p-0">
       <div class="table-responsive">
@@ -27,6 +34,9 @@
               <th scope="col">Phone</th>
               <th scope="col">Status</th>
               <th scope="col">Created</th>
+              {% if current_user.role in ('administrator', 'data_steward') %}
+              <th scope="col"></th>
+              {% endif %}
             </tr>
           </thead>
           <tbody>
@@ -46,6 +56,9 @@
                 {% endif %}
               </td>
               <td class="small text-muted">{{ record.created_at.strftime('%d %b %Y') }}</td>
+              {% if current_user.role in ('administrator', 'data_steward') %}
+              <td><a href="{{ url_for('source_records.edit', id=record.id) }}" class="btn btn-xs btn-outline-secondary btn-sm py-0 px-2 small">Edit</a></td>
+              {% endif %}
             </tr>
             {% else %}
             <tr>
