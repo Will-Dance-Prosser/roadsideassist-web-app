@@ -5,9 +5,9 @@
 {% block content %}
 
   <div class="mb-4 d-flex align-items-center gap-3">
-    <a href="{{ url_for('golden_records.index') }}" class="btn btn-sm btn-outline-secondary">
-      <i class="bi bi-arrow-left"></i> Golden Records
-    </a>
+    <button type="button" onclick="history.back()" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-arrow-left" aria-hidden="true"></i> Back
+    </button>
     <div>
       <h1 class="h4 mb-0 fw-semibold">GR-{{ '%04d' % record.id }}</h1>
       <p class="text-muted small mt-1 mb-0">Golden Record detail</p>
@@ -66,6 +66,7 @@
               <th scope="col">Date of Birth</th>
               <th scope="col">Postcode</th>
               <th scope="col">Phone</th>
+              <th scope="col"></th>
             </tr>
           </thead>
           <tbody>
@@ -79,7 +80,9 @@
               <td class="small">{{ sr.date_of_birth.strftime('%d %b %Y') if sr.date_of_birth else '—' }}</td>
               <td class="small">{{ sr.postcode or '—' }}</td>
               <td class="small">{{ sr.phone or '—' }}</td>
-            </tr>
+              <td class="pe-2">
+                <a href="{{ url_for('source_records.detail', id=sr.id) }}" class="btn btn-sm btn-outline-primary py-0 px-2 small">View</a>
+              </td>
             {% else %}
             <tr>
               <td colspan="7" class="text-center text-muted small py-4">No linked source records found.</td>

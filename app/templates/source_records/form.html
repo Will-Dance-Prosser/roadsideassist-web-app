@@ -5,22 +5,13 @@
 {% block content %}
 
   <div class="mb-4 d-flex align-items-center gap-3">
-    <a href="{{ url_for('source_records.index') }}" class="btn btn-sm btn-outline-secondary">
-      <i class="bi bi-arrow-left"></i> Source Records
-    </a>
+    <button type="button" onclick="history.back()" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-arrow-left"></i> Back
+    </button>
     <div>
       <h1 class="h4 mb-0 fw-semibold">{{ title }}</h1>
     </div>
   </div>
-
-  {% with messages = get_flashed_messages(with_categories=true) %}
-    {% for category, message in messages %}
-      <div class="alert alert-{{ 'success' if category == 'success' else 'warning' }} alert-dismissible fade show" role="alert">
-        {{ message }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-      </div>
-    {% endfor %}
-  {% endwith %}
 
   <div class="card border-0 shadow-sm">
     <div class="card-body p-4">

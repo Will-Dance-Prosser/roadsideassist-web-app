@@ -47,7 +47,7 @@
           <tbody>
             {% for record in records %}
             <tr>
-              <td><span class="ra-case-id fw-medium">{{ record.external_id }}</span></td>
+              <td><a href="{{ url_for('source_records.detail', id=record.id) }}" class="ra-case-id fw-medium text-decoration-none">{{ record.external_id }}</a></td>
               <td class="small">{{ record.first_name or '' }} {{ record.last_name or '' }}</td>
               <td class="small">{{ record.source_system.name }}</td>
               <td class="small">{{ record.email or '—' }}</td>
@@ -62,7 +62,12 @@
               </td>
               <td class="small text-muted">{{ record.created_at.strftime('%d %b %Y') }}</td>
               {% if current_user.role in ('administrator', 'data_steward') %}
-              <td><a href="{{ url_for('source_records.edit', id=record.id) }}" class="btn btn-xs btn-outline-secondary btn-sm py-0 px-2 small">Edit</a></td>
+              <td class="d-flex gap-1">
+                <a href="{{ url_for('source_records.detail', id=record.id) }}" class="btn btn-xs btn-outline-secondary btn-sm py-0 px-2 small">View</a>
+                <a href="{{ url_for('source_records.edit', id=record.id) }}" class="btn btn-xs btn-outline-primary btn-sm py-0 px-2 small">Edit</a>
+              </td>
+              {% else %}
+              <td><a href="{{ url_for('source_records.detail', id=record.id) }}" class="btn btn-xs btn-outline-secondary btn-sm py-0 px-2 small">View</a></td>
               {% endif %}
             </tr>
             {% else %}

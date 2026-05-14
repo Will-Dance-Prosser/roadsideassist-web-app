@@ -33,12 +33,13 @@
               <th scope="col">Linked Records</th>
               <th scope="col">Created</th>
               <th scope="col">Updated</th>
+              <th scope="col"></th>
             </tr>
           </thead>
           <tbody>
             {% for gr in records %}
-            <tr>
-              <td><a href="{{ url_for('golden_records.detail', id=gr.id) }}" class="ra-case-id fw-medium text-decoration-none">GR-{{ '%04d' % gr.id }}</a></td>
+            <tr class="ra-clickable-row" onclick="window.location='{{ url_for('golden_records.detail', id=gr.id) }}'" style="cursor:pointer">
+              <td><span class="ra-case-id fw-medium">GR-{{ '%04d' % gr.id }}</span></td>
               <td class="small">{{ gr.first_name or '—' }} {{ gr.last_name or '' }}</td>
               <td class="small">{{ gr.email or '—' }}</td>
               <td class="small">{{ gr.date_of_birth.strftime('%d %b %Y') if gr.date_of_birth else '—' }}</td>
@@ -49,6 +50,7 @@
               </td>
               <td class="small text-muted">{{ gr.created_at.strftime('%d %b %Y') }}</td>
               <td class="small text-muted">{{ gr.updated_at.strftime('%d %b %Y') }}</td>
+              <td><a href="{{ url_for('golden_records.detail', id=gr.id) }}" class="btn btn-xs btn-outline-secondary btn-sm py-0 px-2 small" onclick="event.stopPropagation()">View</a></td>
             </tr>
             {% else %}
             <tr>

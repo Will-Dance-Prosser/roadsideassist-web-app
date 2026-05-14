@@ -62,6 +62,17 @@ def create():
     return render_template("source_records/form.html", form=form, title="New Source Record")
 
 
+@source_records_bp.route("/source-records/<int:id>", methods=["GET"])
+@login_required
+@role_required("administrator", "data_steward", "data_analyst")
+def detail(id):
+    """Read-only detail view for a source record."""
+    record = db.session.get(SourceRecord, id)
+    if record is None:
+        abort(404)
+    return render_template("source_records/detail.html", record=record)
+
+
 @source_records_bp.route("/source-records/<int:id>/edit", methods=["GET", "POST"])
 @login_required
 @role_required("administrator", "data_steward")
