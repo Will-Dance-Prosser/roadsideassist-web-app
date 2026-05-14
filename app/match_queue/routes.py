@@ -4,6 +4,7 @@ from flask_login import login_required, current_user
 from app.auth.decorators import role_required
 from app.extensions import db
 from app.models import AuditLog, GoldenRecord, GoldenRecordLink, MatchCandidate, MergeDecision
+from app.match_queue.explain import build_explanation
 
 
 match_queue_bp = Blueprint("match_queue", __name__)
@@ -28,7 +29,8 @@ def detail(id):
     candidate = db.session.get(MatchCandidate, id)
     if candidate is None:
         abort(404)
-    return render_template("match_queue/detail.html", candidate=candidate)
+    explanation = build_explanation(candidate)
+    return render_template("match_queue/detail.html", candidate=candidate, explanation=explanation)
 
 
 

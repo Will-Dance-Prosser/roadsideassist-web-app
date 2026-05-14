@@ -94,6 +94,45 @@
 
   </div>
 
+  <!-- Match Explanation -->
+  <div class="card border-0 shadow-sm mt-4">
+    <div class="card-header bg-white border-bottom fw-semibold">
+      <i class="bi bi-search me-1"></i> Match Explanation
+    </div>
+    <div class="card-body p-0">
+      <table class="table table-sm align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th scope="col" class="small">Field</th>
+            <th scope="col" class="small">Record A</th>
+            <th scope="col" class="small">Record B</th>
+            <th scope="col" class="small">Result</th>
+            <th scope="col" class="small">Note</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in explanation %}
+          <tr>
+            <td class="small fw-medium text-muted">{{ row.field }}</td>
+            <td class="small">{{ row.a_val }}</td>
+            <td class="small">{{ row.b_val }}</td>
+            <td class="small">
+              {% if row.match is none %}
+                <span class="badge bg-light text-secondary border">Unknown</span>
+              {% elif row.match %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle">Match</span>
+              {% else %}
+                <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Mismatch</span>
+              {% endif %}
+            </td>
+            <td class="small text-muted">{{ row.note }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
   {% if current_user.role == 'data_steward' and candidate.status == 'pending' %}
   <div class="mt-4 d-flex gap-3">
     <form method="POST" action="{{ url_for('match_queue.approve', id=candidate.id) }}">
