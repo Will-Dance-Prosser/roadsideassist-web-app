@@ -52,6 +52,7 @@ def register_blueprints(app):
         return render_template("errors/403.html"), 403    
 
 def register_commands(app):
-    from app.commands import seed_demo_mdm_data, seed_demo_users
+    from app.commands import reset_demo_mdm_data, seed_demo_mdm_data, seed_demo_users
     app.cli.add_command(seed_demo_users)
     app.cli.add_command(seed_demo_mdm_data)
+    app.cli.add_command(reset_demo_mdm_data)

@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}GR-{{ '%04d' % record.id }} | MemberMatch{% endblock %}
+
+{% block content %}
+
+  <div class="mb-4 d-flex align-items-center gap-3">
+    <a href="{{ url_for('golden_records.index') }}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-arrow-left"></i> Golden Records
+    </a>
+    <div>
+      <h1 class="h4 mb-0 fw-semibold">GR-{{ '%04d' % record.id }}</h1>
+      <p class="text-muted small mt-1 mb-0">Golden Record detail</p>
+    </div>
+  </div>
+
+  {# --- Golden Record Summary --- #}
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-bottom fw-semibold">
+      <i class="bi bi-star-fill text-warning me-1"></i> Golden Record Summary
+    </div>
+    <div class="card-body">
+      <dl class="row mb-0 small">
+        <dt class="col-sm-3 text-muted">Record ID</dt>
+        <dd class="col-sm-9 fw-medium">GR-{{ '%04d' % record.id }}</dd>
+
+        <dt class="col-sm-3 text-muted">Full Name</dt>
+        <dd class="col-sm-9">{{ record.first_name or '—' }} {{ record.last_name or '' }}</dd>
+
+        <dt class="col-sm-3 text-muted">Email</dt>
+        <dd class="col-sm-9">{{ record.email or '—' }}</dd>
+
+        <dt class="col-sm-3 text-muted">Date of Birth</dt>
+        <dd class="col-sm-9">{{ record.date_of_birth.strftime('%d %b %Y') if record.date_of_birth else '—' }}</dd>
+
+        <dt class="col-sm-3 text-muted">Postcode</dt>
+        <dd class="col-sm-9">{{ record.postcode or '—' }}</dd>
+
+        <dt class="col-sm-3 text-muted">Phone</dt>
+        <dd class="col-sm-9">{{ record.phone or '—' }}</dd>
+
+        <dt class="col-sm-3 text-muted">Created</dt>
+        <dd class="col-sm-9">{{ record.created_at.strftime('%d %b %Y %H:%M') }}</dd>
+
+        <dt class="col-sm-3 text-muted">Last Updated</dt>
+        <dd class="col-sm-9">{{ record.updated_at.strftime('%d %b %Y %H:%M') }}</dd>
+      </dl>
+    </div>
+  </div>
+
+  {# --- Linked Source Records --- #}
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-bottom d-flex align-items-center justify-content-between">
+      <span class="fw-semibold"><i class="bi bi-link-45deg me-1"></i>Linked Source Records</span>
+      <span class="text-muted small">{{ record.source_links|length }} record{{ 's' if record.source_links|length != 1 }}</span>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th scope="col">Source System</th>
+              <th scope="col">External ID</th>
+              <th scope="col">Full Name</th>
+              <th scope="col">Email</th>
+              <th scope="col">Date of Birth</th>
+              <th scope="col">Postcode</th>
+              <th scope="col">Phone</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for link in record.source_links %}
+            {% set sr = link.source_record %}
+            <tr>
+              <td class="small fw-medium">{{ sr.source_system.name }}</td>
+              <td><span class="ra-case-id">{{ sr.external_id }}</span></td>
+              <td class="small">{{ sr.first_name or '—' }} {{ sr.last_name or '' }}</td>
+              <td class="small">{{ sr.email or '—' }}</td>
+              <td class="small">{{ sr.date_of_birth.strftime('%d %b %Y') if sr.date_of_birth else '—' }}</td>
+              <td class="small">{{ sr.postcode or '—' }}</td>
+              <td class="small">{{ sr.phone or '—' }}</td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="7" class="text-center text-muted small py-4">No linked source records found.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+{% endblock %}

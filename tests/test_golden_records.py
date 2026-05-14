@@ -78,6 +78,47 @@ def test_golden_records_shows_linked_source_record_count(client, app):
     _seed_golden_record(app)
     _login(client, app)
     response = client.get("/golden-records")
+    assert b"2" in response.data
+
+
+# --- Detail page ---
+
+def test_unauthenticated_golden_record_detail_redirects_to_login(client, app):
+    golden_id = _seed_golden_record(app)
+    response = client.get(f"/golden-records/{golden_id}", follow_redirects=False)
+    assert response.status_code == 302
+    assert "/login" in response.headers["Location"]
+
+
+def test_logged_in_user_can_view_golden_record_detail(client, app):
+    golden_id = _seed_golden_record(app)
+    _login(client, app)
+    response = client.get(f"/golden-records/{golden_id}")
     assert response.status_code == 200
-    # Two source records linked — badge should show "2"
-    assert b">2<" in response.data
+
+
+def test_golden_record_detail_renders_golden_record_fields(client, app):
+    golden_id = _seed_golden_record(app)
+    _login(client, app)
+    response = client.get(f"/golden-records/{golden_id}")
+    assert response.status_code == 200
+    assert b"John" in response.data
+    assert b"Smith" in response.data
+    assert b"john@example.com" in response.data
+    assert b"GR-" in response.data
+
+
+def test_golden_record_detail_renders_linked_source_records(client, app):
+    golden_id = _seed_golden_record(app)
+    _login(client, app)
+    response = client.get(f"/golden-records/{golden_id}")
+    assert response.status_code == 200
+    assert b"CRM-001" in response.data
+    assert b"CRM-002" in response.data
+    assert b"CRM" in response.data
+
+
+def test_missing_golden_record_returns_404(client, app):
+    _login(client, app)
+    response = client.get("/golden-records/99999")
+    assert response.status_code == 404

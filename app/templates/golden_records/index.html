@@ -33,7 +33,7 @@
           <tbody>
             {% for gr in records %}
             <tr>
-              <td><span class="ra-case-id fw-medium">GR-{{ '%04d' % gr.id }}</span></td>
+              <td><a href="{{ url_for('golden_records.detail', id=gr.id) }}" class="ra-case-id fw-medium text-decoration-none">GR-{{ '%04d' % gr.id }}</a></td>
               <td class="small">{{ gr.first_name or '—' }} {{ gr.last_name or '' }}</td>
               <td class="small">{{ gr.email or '—' }}</td>
               <td class="small">{{ gr.date_of_birth.strftime('%d %b %Y') if gr.date_of_birth else '—' }}</td>
