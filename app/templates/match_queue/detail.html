@@ -4,12 +4,14 @@
 
 {% block content %}
 
-  <div class="mb-4">
-    <a href="{{ url_for('match_queue.index') }}" class="text-muted small text-decoration-none">
-      <i class="bi bi-arrow-left"></i> Back to Match Queue
+  <div class="mb-4 d-flex align-items-center gap-3">
+    <a href="{{ url_for('match_queue.index') }}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-arrow-left" aria-hidden="true"></i> Match Queue
     </a>
-    <h1 class="h4 mb-0 fw-semibold mt-2">Match Candidate MC-{{ '%04d' % candidate.id }}</h1>
-    <p class="text-muted small mt-1 mb-0">Review the two source records identified as potential duplicates</p>
+    <div>
+      <h1 class="h4 mb-0 fw-semibold mt-0">Match Candidate MC-{{ '%04d' % candidate.id }}</h1>
+      <p class="text-muted small mt-1 mb-0">Review the two source records identified as potential duplicates</p>
+    </div>
   </div>
 
   {% with messages = get_flashed_messages(with_categories=true) %}

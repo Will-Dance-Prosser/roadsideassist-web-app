@@ -262,3 +262,37 @@ def test_data_analyst_does_not_see_audit_log_entries(app, analyst_client):
     response = analyst_client.get("/")
     assert b"match_rejected" not in response.data
     assert b"Analyst should not see this" not in response.data
+
+
+# ---------------------------------------------------------------------------
+# Quick links
+# ---------------------------------------------------------------------------
+
+def test_dashboard_has_view_queue_link(client):
+    response = client.get("/")
+    assert b"View queue" in response.data
+
+
+def test_dashboard_has_view_records_link(client):
+    response = client.get("/")
+    assert b"View records" in response.data
+
+
+def test_dashboard_has_view_golden_records_link(client):
+    response = client.get("/")
+    assert b"View golden records" in response.data
+
+
+def test_admin_sees_view_audit_log_link(admin_client):
+    response = admin_client.get("/")
+    assert b"View audit log" in response.data
+
+
+def test_data_steward_does_not_see_view_audit_log_link(client):
+    response = client.get("/")
+    assert b"View audit log" not in response.data
+
+
+def test_data_analyst_does_not_see_view_audit_log_link(analyst_client):
+    response = analyst_client.get("/")
+    assert b"View audit log" not in response.data
