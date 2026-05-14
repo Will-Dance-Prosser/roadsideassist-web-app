@@ -11,73 +11,77 @@
 
   <!-- Summary cards -->
   <div class="row g-3 mb-4">
-    {% for card in [
-        ('Pending Review',    '14', 'bi-hourglass-split',  'ra-card-amber'),
-        ('Strong Matches',    '6',  'bi-intersect',        'ra-card-yellow'),
-        ('Golden Records',    '31', 'bi-star',             'ra-card-green'),
-        ('Rejected Matches',  '5',  'bi-x-circle',         'ra-card-grey')
-    ] %}
     <div class="col-sm-6 col-xl-3">
-      <div class="ra-summary-card {{ card[3] }} d-flex align-items-center gap-3 p-3 rounded-3">
-        <i class="bi {{ card[2] }} ra-card-icon"></i>
+      <div class="ra-summary-card ra-card-amber d-flex align-items-center gap-3 p-3 rounded-3">
+        <i class="bi bi-hourglass-split ra-card-icon"></i>
         <div>
-          <div class="ra-card-value">{{ card[1] }}</div>
-          <div class="ra-card-label">{{ card[0] }}</div>
+          <div class="ra-card-value">{{ stats.pending_review }}</div>
+          <div class="ra-card-label">Pending Review</div>
         </div>
       </div>
     </div>
-    {% endfor %}
+    <div class="col-sm-6 col-xl-3">
+      <div class="ra-summary-card ra-card-yellow d-flex align-items-center gap-3 p-3 rounded-3">
+        <i class="bi bi-database ra-card-icon"></i>
+        <div>
+          <div class="ra-card-value">{{ stats.source_records }}</div>
+          <div class="ra-card-label">Source Records</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <div class="ra-summary-card ra-card-green d-flex align-items-center gap-3 p-3 rounded-3">
+        <i class="bi bi-star ra-card-icon"></i>
+        <div>
+          <div class="ra-card-value">{{ stats.golden_records }}</div>
+          <div class="ra-card-label">Golden Records</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <div class="ra-summary-card ra-card-grey d-flex align-items-center gap-3 p-3 rounded-3">
+        <i class="bi bi-archive ra-card-icon"></i>
+        <div>
+          <div class="ra-card-value">{{ stats.archived_records }}</div>
+          <div class="ra-card-label">Archived Records</div>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <!-- Recent match candidates table -->
+  <!-- Recent Activity -->
   <div class="card border-0 shadow-sm">
-    <div class="card-header bg-white border-bottom">
-      <span class="fw-semibold">Recent Match Candidates</span>
+    <div class="card-header bg-white border-bottom fw-semibold">
+      <i class="bi bi-clock-history me-1"></i> Recent Activity
     </div>
     <div class="card-body p-0">
-      <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-          <thead class="table-light">
-            <tr>
-              <th scope="col">Candidate ID</th>
-              <th scope="col">Source A</th>
-              <th scope="col">Source B</th>
-              <th scope="col">Match Score</th>
-              <th scope="col">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% set candidates = [
-              ('MC-0051', 'CRM – John A. Smith',     'ERP – J. Smith',          '96%', 'Pending Review'),
-              ('MC-0050', 'CRM – Patricia Patel',    'LEGACY – P. Patel',       '91%', 'Approved'),
-              ('MC-0049', 'ERP – C. Johnson',        'CRM – Charles Johnson',   '88%', 'Pending Review'),
-              ('MC-0048', 'LEGACY – Sara Ahmed',     'CRM – S. Ahmed',          '74%', 'Rejected'),
-              ('MC-0047', 'ERP – L. Williams',       'LEGACY – Laura Williams', '95%', 'Approved'),
-            ] %}
-            {% for c in candidates %}
-            <tr>
-              <td><span class="ra-case-id fw-medium">{{ c[0] }}</span></td>
-              <td class="small">{{ c[1] }}</td>
-              <td class="small">{{ c[2] }}</td>
-              <td>
-                <span class="fw-medium {% if c[3]|int >= 90 %}text-success{% elif c[3]|int >= 75 %}text-warning{% else %}text-danger{% endif %}">
-                  {{ c[3] }}
-                </span>
-              </td>
-              <td>
-                {% if c[4] == 'Pending Review' %}
-                  <span class="badge ra-badge-open">Pending Review</span>
-                {% elif c[4] == 'Approved' %}
-                  <span class="badge ra-badge-resolved">Approved</span>
-                {% else %}
-                  <span class="badge ra-badge-assigned">Rejected</span>
-                {% endif %}
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+      {% if recent_activity %}
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th scope="col" class="small">Date / Time</th>
+            <th scope="col" class="small">User</th>
+            <th scope="col" class="small">Action</th>
+            <th scope="col" class="small">Detail</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for entry in recent_activity %}
+          <tr>
+            <td class="small text-muted text-nowrap">{{ entry.created_at.strftime('%d %b %Y %H:%M') }}</td>
+            <td class="small">{{ entry.user.username if entry.user else 'System' }}</td>
+            <td><span class="badge bg-light text-dark border small">{{ entry.action }}</span></td>
+            <td class="small text-muted">{{ entry.detail or '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="text-center text-muted small py-4">
+        <i class="bi bi-journal-text fs-4 d-block mb-2"></i>
+        No activity recorded yet.
       </div>
+      {% endif %}
     </div>
   </div>
 
