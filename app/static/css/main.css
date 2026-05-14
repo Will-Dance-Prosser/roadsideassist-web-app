@@ -127,6 +127,8 @@ body {
 .ra-card-green  .ra-card-icon { color: #22c55e; }
 .ra-card-amber  .ra-card-icon { color: #f59e0b; }
 .ra-card-grey   .ra-card-icon { color: #9ca3af; }
+.ra-card-red    .ra-card-icon { color: #ef4444; }
+.ra-card-blue   .ra-card-icon { color: #3b82f6; }
 
 /* ── Candidate ID style ── */
 .ra-case-id { color: #111827; }

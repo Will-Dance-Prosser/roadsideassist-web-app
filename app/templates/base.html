@@ -30,36 +30,6 @@
               </a>
             </li>
 
-            {% for label, icon, endpoint in [
-                ('Data Sources',    'bi-hdd-stack',      ''),
-                ('Reports',         'bi-bar-chart-line', '')
-            ] %}
-            <li>
-              <span class="ra-nav-link disabled">
-                <i class="bi {{ icon }}"></i>
-                <span>{{ label }}</span>
-              </span>
-            </li>
-            {% endfor %}
-
-            {% if current_user.is_authenticated and current_user.role == 'administrator' %}
-            <li>
-              <a href="{{ url_for('audit_log.index') }}"
-                 class="ra-nav-link {% if request.endpoint == 'audit_log.index' %}active{% endif %}">
-                <i class="bi bi-journal-text"></i>
-                <span>Audit Log</span>
-              </a>
-            </li>
-            {% endif %}
-
-            <li>
-              <a href="{{ url_for('golden_records.index') }}"
-                 class="ra-nav-link {% if request.endpoint == 'golden_records.index' %}active{% endif %}">
-                <i class="bi bi-star"></i>
-                <span>Golden Records</span>
-              </a>
-            </li>
-
             <li>
               <a href="{{ url_for('source_records.index') }}"
                  class="ra-nav-link {% if request.endpoint == 'source_records.index' %}active{% endif %}">
@@ -76,12 +46,44 @@
               </a>
             </li>
 
+            <li>
+              <a href="{{ url_for('golden_records.index') }}"
+                 class="ra-nav-link {% if request.endpoint == 'golden_records.index' %}active{% endif %}">
+                <i class="bi bi-star"></i>
+                <span>Golden Records</span>
+              </a>
+            </li>
+
+            <li>
+              <span class="ra-nav-link disabled">
+                <i class="bi bi-hdd-stack"></i>
+                <span>Data Sources</span>
+              </span>
+            </li>
+
             {% if current_user.is_authenticated and current_user.role == 'administrator' %}
             <li>
               <a href="{{ url_for('rules.index') }}"
                  class="ra-nav-link {% if request.endpoint == 'rules.index' %}active{% endif %}">
                 <i class="bi bi-sliders"></i>
                 <span>Rules</span>
+              </a>
+            </li>
+            {% endif %}
+
+            <li>
+              <span class="ra-nav-link disabled">
+                <i class="bi bi-bar-chart-line"></i>
+                <span>Reports</span>
+              </span>
+            </li>
+
+            {% if current_user.is_authenticated and current_user.role == 'administrator' %}
+            <li>
+              <a href="{{ url_for('audit_log.index') }}"
+                 class="ra-nav-link {% if request.endpoint == 'audit_log.index' %}active{% endif %}">
+                <i class="bi bi-journal-text"></i>
+                <span>Audit Log</span>
               </a>
             </li>
             {% endif %}
