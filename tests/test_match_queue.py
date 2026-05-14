@@ -275,6 +275,20 @@ def test_data_analyst_cannot_reject_receives_403(client, app):
     assert response.status_code == 403
 
 
+def test_administrator_cannot_approve_receives_403(client, app):
+    candidate_id = _seed_pending_candidate(app)
+    _login_as(client, app, "administrator")
+    response = client.post(f"/match-candidates/{candidate_id}/approve")
+    assert response.status_code == 403
+
+
+def test_administrator_cannot_reject_receives_403(client, app):
+    candidate_id = _seed_pending_candidate(app)
+    _login_as(client, app, "administrator")
+    response = client.post(f"/match-candidates/{candidate_id}/reject")
+    assert response.status_code == 403
+
+
 def test_already_reviewed_candidate_cannot_be_reviewed_again(client, app):
     candidate_id = _seed_pending_candidate(app)
     _login_as(client, app, "data_steward")
@@ -284,3 +298,43 @@ def test_already_reviewed_candidate_cannot_be_reviewed_again(client, app):
     with app.app_context():
         assert MergeDecision.query.filter_by(candidate_id=candidate_id).count() == 1
         assert GoldenRecord.query.count() == 1
+        assert GoldenRecordLink.query.count() == 2
+        assert AuditLog.query.filter_by(action="match_approved").count() == 1
+
+
+def test_already_rejected_candidate_cannot_be_rejected_again(client, app):
+    candidate_id = _seed_pending_candidate(app)
+    _login_as(client, app, "data_steward")
+    _post(client, f"/match-candidates/{candidate_id}/reject")
+    _post(client, f"/match-candidates/{candidate_id}/reject")
+    with app.app_context():
+        assert MergeDecision.query.filter_by(candidate_id=candidate_id).count() == 1
+        assert AuditLog.query.filter_by(action="match_rejected").count() == 1
+
+
+def test_approve_buttons_hidden_for_data_analyst(client, app):
+    candidate_id = _seed_pending_candidate(app)
+    _login_as(client, app, "data_analyst")
+    response = client.get(f"/match-candidates/{candidate_id}")
+    assert response.status_code == 200
+    assert b"Approve Match" not in response.data
+    assert b"Reject Match" not in response.data
+
+
+def test_approve_buttons_hidden_for_administrator(client, app):
+    candidate_id = _seed_pending_candidate(app)
+    _login_as(client, app, "administrator")
+    response = client.get(f"/match-candidates/{candidate_id}")
+    assert response.status_code == 200
+    assert b"Approve Match" not in response.data
+    assert b"Reject Match" not in response.data
+
+
+def test_approve_buttons_hidden_for_already_reviewed_candidate(client, app):
+    candidate_id = _seed_pending_candidate(app)
+    _login_as(client, app, "data_steward")
+    _post(client, f"/match-candidates/{candidate_id}/approve")
+    response = client.get(f"/match-candidates/{candidate_id}")
+    assert response.status_code == 200
+    assert b"Approve Match" not in response.data
+    assert b"Reject Match" not in response.data

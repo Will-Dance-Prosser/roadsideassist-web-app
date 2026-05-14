@@ -1,7 +1,7 @@
 import pytest
 from app import create_app
 from app.extensions import db
-from app.models import User
+from app.models import MatchRule, User
 from config import TestingConfig
 
 
@@ -56,7 +56,7 @@ def test_administrator_can_access_rules(client, app):
     _create_and_login(client, app, "admin", "admin@example.com", "administrator")
     response = client.get("/rules")
     assert response.status_code == 200
-    assert b"Rule management will be added in a later development stage" in response.data
+    assert b"Match Rules" in response.data
 
 
 def test_403_page_renders_useful_text(client, app):
@@ -66,3 +66,42 @@ def test_403_page_renders_useful_text(client, app):
     assert b"403" in response.data
     assert b"Access Denied" in response.data
     assert b"Back to Dashboard" in response.data
+
+
+def _seed_rule(app):
+    with app.app_context():
+        rule = MatchRule(
+            field_name="email",
+            match_method="exact",
+            weight=0.35,
+            is_active=True,
+        )
+        db.session.add(rule)
+        db.session.commit()
+
+
+def test_rules_page_renders_rule_from_database(client, app):
+    _seed_rule(app)
+    _create_and_login(client, app, "admin", "admin@example.com", "administrator")
+    response = client.get("/rules")
+    assert response.status_code == 200
+    assert b"email" in response.data
+    assert b"exact" in response.data
+    assert b"0.35" in response.data
+
+
+def test_rules_page_shows_active_badge(client, app):
+    _seed_rule(app)
+    _create_and_login(client, app, "admin", "admin@example.com", "administrator")
+    response = client.get("/rules")
+    assert b"Active" in response.data
+
+
+def test_rules_page_shows_inactive_badge(client, app):
+    with app.app_context():
+        rule = MatchRule(field_name="phone", match_method="normalised", weight=0.25, is_active=False)
+        db.session.add(rule)
+        db.session.commit()
+    _create_and_login(client, app, "admin", "admin@example.com", "administrator")
+    response = client.get("/rules")
+    assert b"Inactive" in response.data

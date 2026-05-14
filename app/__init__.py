@@ -38,18 +38,25 @@ def register_blueprints(app):
     from app.rules.routes import rules_bp
     from app.source_records.routes import source_records_bp
     from app.match_queue.routes import match_queue_bp
+    from app.golden_records.routes import golden_records_bp
+    from app.audit_log.routes import audit_log_bp
+    from app.search.routes import search_bp
 
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(rules_bp)
     app.register_blueprint(source_records_bp)
     app.register_blueprint(match_queue_bp)
+    app.register_blueprint(golden_records_bp)
+    app.register_blueprint(audit_log_bp)
+    app.register_blueprint(search_bp)
 
     @app.errorhandler(403)
     def forbidden(e):
         return render_template("errors/403.html"), 403    
 
 def register_commands(app):
-    from app.commands import seed_demo_mdm_data, seed_demo_users
+    from app.commands import reset_demo_mdm_data, seed_demo_mdm_data, seed_demo_users
     app.cli.add_command(seed_demo_users)
     app.cli.add_command(seed_demo_mdm_data)
+    app.cli.add_command(reset_demo_mdm_data)

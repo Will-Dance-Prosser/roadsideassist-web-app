@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }} | MemberMatch{% endblock %}
+
+{% block content %}
+
+  <div class="mb-4 d-flex align-items-center gap-3">
+    <button type="button" onclick="history.back()" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-arrow-left"></i> Back
+    </button>
+    <div>
+      <h1 class="h4 mb-0 fw-semibold">{{ title }}</h1>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-4">
+      <form method="POST" novalidate>
+        {{ form.hidden_tag() }}
+
+        <div class="row g-3">
+
+          <div class="col-md-6">
+            <label class="form-label small fw-medium" for="source_system_id">Source System <span class="text-danger">*</span></label>
+            {{ form.source_system_id(class="form-select form-select-sm" + (" is-invalid" if form.source_system_id.errors else ""), id="source_system_id") }}
+            {% for error in form.source_system_id.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label small fw-medium" for="external_id">External ID <span class="text-danger">*</span></label>
+            {{ form.external_id(class="form-control form-control-sm" + (" is-invalid" if form.external_id.errors else ""), id="external_id", placeholder="e.g. CRM-001") }}
+            {% for error in form.external_id.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label small fw-medium" for="first_name">First Name</label>
+            {{ form.first_name(class="form-control form-control-sm" + (" is-invalid" if form.first_name.errors else ""), id="first_name") }}
+            {% for error in form.first_name.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label small fw-medium" for="last_name">Last Name</label>
+            {{ form.last_name(class="form-control form-control-sm" + (" is-invalid" if form.last_name.errors else ""), id="last_name") }}
+            {% for error in form.last_name.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label small fw-medium" for="email">Email</label>
+            {{ form.email(class="form-control form-control-sm" + (" is-invalid" if form.email.errors else ""), id="email", placeholder="optional") }}
+            {% for error in form.email.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label small fw-medium" for="date_of_birth">Date of Birth</label>
+            {{ form.date_of_birth(class="form-control form-control-sm" + (" is-invalid" if form.date_of_birth.errors else ""), id="date_of_birth") }}
+            {% for error in form.date_of_birth.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label small fw-medium" for="postcode">Postcode</label>
+            {{ form.postcode(class="form-control form-control-sm" + (" is-invalid" if form.postcode.errors else ""), id="postcode") }}
+            {% for error in form.postcode.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="col-md-6">
+            <label class="form-label small fw-medium" for="phone">Phone</label>
+            {{ form.phone(class="form-control form-control-sm" + (" is-invalid" if form.phone.errors else ""), id="phone") }}
+            {% for error in form.phone.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="col-12">
+            <label class="form-label small fw-medium" for="raw_data">Raw Data (JSON)</label>
+            {{ form.raw_data(class="form-control form-control-sm font-monospace" + (" is-invalid" if form.raw_data.errors else ""), id="raw_data", rows=3, placeholder='{"key": "value"}') }}
+            {% for error in form.raw_data.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+        </div>
+
+        <div class="mt-4 d-flex gap-2">
+          {{ form.submit(class="btn btn-primary btn-sm") }}
+          <a href="{{ url_for('source_records.index') }}" class="btn btn-outline-secondary btn-sm">Cancel</a>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  {# Archive button — only shown on edit page, only for non-archived records #}
+  {% if record and not record.is_archived %}
+  <div class="card border-0 shadow-sm mt-4 border-danger-subtle">
+    <div class="card-body p-4">
+      <h6 class="fw-semibold text-danger mb-1">Archive this record</h6>
+      <p class="text-muted small mb-3">Archiving hides this record from active processing. It cannot be undone here.</p>
+      <form method="POST" action="{{ url_for('source_records.archive', id=record.id) }}">
+        {{ form.hidden_tag() }}
+        <button type="submit" class="btn btn-sm btn-outline-danger"
+          onclick="return confirm('Archive this source record?')">
+          <i class="bi bi-archive me-1"></i> Archive Record
+        </button>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
+{% endblock %}

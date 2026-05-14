@@ -3,7 +3,7 @@ from datetime import date
 import click
 from flask.cli import with_appcontext
 from app.extensions import db
-from app.models import AuditLog, MatchCandidate, MatchRule, SourceRecord, SourceSystem, User
+from app.models import AuditLog, GoldenRecord, GoldenRecordLink, MatchCandidate, MatchRule, MergeDecision, SourceRecord, SourceSystem, User
 
 
 DEMO_USERS = [
@@ -16,7 +16,7 @@ DEMO_USERS = [
 @click.command("seed-demo-users")
 @with_appcontext
 def seed_demo_users():
-    """Create demo users for local development if they do not already exist."""
+    #Create demo users for local development if they do not already exist.
 
     password = os.environ.get("DEMO_USER_PASSWORD", "demo-password-123")
 
@@ -39,7 +39,7 @@ def seed_demo_users():
 
     db.session.commit()
     click.echo(f"\nPassword for new accounts: {password}")
-    click.echo("Run 'flask seed-demo-users' again at any time — existing users are not overwritten.")
+    click.echo("Run 'flask seed-demo-users' again at any time, existing users are not overwritten.")
 
 
 
@@ -197,3 +197,33 @@ def seed_demo_mdm_data():
         click.echo("  audit log entry created")
 
     click.echo("\nDemo MDM seed complete. Run again at any time — existing records are skipped.")
+
+
+@click.command("reset-demo-mdm-data")
+@with_appcontext
+def reset_demo_mdm_data():
+    """Delete all MDM demo data (not users) and re-seed from scratch."""
+
+    click.echo("Deleting existing MDM demo data...")
+
+    # Delete in safe order to respect foreign key constraints
+    AuditLog.query.delete()
+    MergeDecision.query.delete()
+    GoldenRecordLink.query.delete()
+    GoldenRecord.query.delete()
+    MatchCandidate.query.delete()
+    SourceRecord.query.delete()
+    SourceSystem.query.delete()
+    MatchRule.query.delete()
+    db.session.commit()
+
+    click.echo("Existing MDM demo data deleted. Re-seeding...\n")
+
+    # Re-use the existing seed logic
+    from flask import current_app
+    from click.testing import CliRunner
+    runner = CliRunner()
+    with current_app.app_context():
+        runner.invoke(seed_demo_mdm_data, catch_exceptions=False)
+
+    click.echo("\nDemo MDM data has been reset to its original seeded state.")

@@ -1,0 +1,313 @@
+{% extends "base.html" %}
+
+{% block title %}Search | MemberMatch{% endblock %}
+
+{% block content %}
+
+  <div class="mb-4 d-flex align-items-center gap-3">
+    <a href="{{ url_for('dashboard.index') }}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-arrow-left" aria-hidden="true"></i> Dashboard
+    </a>
+    <div>
+      <h1 class="h4 mb-0 fw-semibold">Search</h1>
+      <p class="text-muted small mt-1 mb-0">Search across source records, match candidates and golden records</p>
+    </div>
+  </div>
+
+  {# ── Inline search form ── #}
+  <form method="get" action="{{ url_for('search.index') }}" class="mb-4">
+    <div class="input-group">
+      <input
+        type="search"
+        name="q"
+        value="{{ q }}"
+        class="form-control"
+        placeholder="Name, email, postcode, phone, external ID or candidate reference…"
+        autofocus
+        aria-label="Search query"
+      >
+      <button class="btn btn-primary" type="submit">
+        <i class="bi bi-search" aria-hidden="true"></i> Search
+      </button>
+    </div>
+  </form>
+
+  {# ── Empty query ── #}
+  {% if empty %}
+  <p class="text-muted">Enter a search term above to find source records, match candidates or golden records.</p>
+
+  {# ── No results ── #}
+  {% elif source_records|length == 0 and match_candidates|length == 0 and golden_records|length == 0 %}
+  <p class="text-muted">No results found for <strong>{{ q }}</strong>. Try a different name, email or candidate reference.</p>
+
+  {# ── Results ── #}
+  {% else %}
+
+    {# ── Source Records ── #}
+    <div class="mb-4">
+      <button
+        class="btn btn-link text-decoration-none p-0 d-flex align-items-center gap-2 mb-2"
+        type="button"
+        data-bs-toggle="collapse"
+        data-bs-target="#section-source"
+        aria-expanded="true"
+        aria-controls="section-source"
+      >
+        <span class="text-uppercase text-muted fw-semibold small">Source Records</span>
+        <span class="badge bg-secondary fw-normal">{{ source_records|length }}</span>
+        <i class="bi bi-chevron-up small text-muted section-chevron" aria-hidden="true"></i>
+      </button>
+      <div class="collapse show" id="section-source">
+        {% if source_records %}
+        <div class="card border-0 shadow-sm">
+          <div class="card-body p-0">
+            <table class="table table-hover align-middle mb-0 small" data-paginate="10">
+              <thead class="table-light">
+                <tr>
+                  <th class="ps-3">Name</th>
+                  <th>External ID</th>
+                  <th>Email</th>
+                  <th>Postcode</th>
+                  <th>Phone</th>
+                  <th>Status</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for r in source_records %}
+                <tr>
+                  <td class="ps-3 fw-semibold">{{ r.first_name or '' }} {{ r.last_name or '' }}</td>
+                  <td class="text-muted">{{ r.external_id }}</td>
+                  <td>{{ r.email or '&mdash;' }}</td>
+                  <td>{{ r.postcode or '&mdash;' }}</td>
+                  <td>{{ r.phone or '&mdash;' }}</td>
+                  <td>
+                    {% if r.is_archived %}
+                      <span class="badge bg-secondary">Archived</span>
+                    {% else %}
+                      <span class="badge bg-success">Active</span>
+                    {% endif %}
+                  </td>
+                  <td class="pe-3">
+                    <a href="{{ url_for('source_records.detail', id=r.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        {% else %}
+        <p class="text-muted small">No source records matched.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    {# ── Match Candidates ── #}
+    <div class="mb-4">
+      <button
+        class="btn btn-link text-decoration-none p-0 d-flex align-items-center gap-2 mb-2"
+        type="button"
+        data-bs-toggle="collapse"
+        data-bs-target="#section-candidates"
+        aria-expanded="true"
+        aria-controls="section-candidates"
+      >
+        <span class="text-uppercase text-muted fw-semibold small">Match Candidates</span>
+        <span class="badge bg-secondary fw-normal">{{ match_candidates|length }}</span>
+        <i class="bi bi-chevron-up small text-muted section-chevron" aria-hidden="true"></i>
+      </button>
+      <div class="collapse show" id="section-candidates">
+        {% if match_candidates %}
+        <div class="card border-0 shadow-sm">
+          <div class="card-body p-0">
+            <table class="table table-hover align-middle mb-0 small" data-paginate="10">
+              <thead class="table-light">
+                <tr>
+                  <th class="ps-3">Candidate</th>
+                  <th>Record A</th>
+                  <th>Record B</th>
+                  <th>Score</th>
+                  <th>Status</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for c in match_candidates %}
+                <tr>
+                  <td class="ps-3 fw-semibold text-muted">MC-{{ "%04d"|format(c.id) }}</td>
+                  <td>{{ c.record_a.first_name or '' }} {{ c.record_a.last_name or '' }}</td>
+                  <td>{{ c.record_b.first_name or '' }} {{ c.record_b.last_name or '' }}</td>
+                  <td class="fw-semibold">{{ (c.match_score * 100) | int }}%</td>
+                  <td>
+                    {% if c.status == 'approved' %}
+                      <span class="badge bg-success">Approved</span>
+                    {% elif c.status == 'rejected' %}
+                      <span class="badge bg-danger">Rejected</span>
+                    {% else %}
+                      <span class="badge bg-warning text-dark">Pending</span>
+                    {% endif %}
+                  </td>
+                  <td class="pe-3">
+                    <a href="{{ url_for('match_queue.detail', id=c.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        {% else %}
+        <p class="text-muted small">No match candidates matched. Try searching by candidate ID, e.g. <code>MC-0001</code>.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    {# ── Golden Records ── #}
+    <div class="mb-4">
+      <button
+        class="btn btn-link text-decoration-none p-0 d-flex align-items-center gap-2 mb-2"
+        type="button"
+        data-bs-toggle="collapse"
+        data-bs-target="#section-golden"
+        aria-expanded="true"
+        aria-controls="section-golden"
+      >
+        <span class="text-uppercase text-muted fw-semibold small">Golden Records</span>
+        <span class="badge bg-secondary fw-normal">{{ golden_records|length }}</span>
+        <i class="bi bi-chevron-up small text-muted section-chevron" aria-hidden="true"></i>
+      </button>
+      <div class="collapse show" id="section-golden">
+        {% if golden_records %}
+        <div class="card border-0 shadow-sm">
+          <div class="card-body p-0">
+            <table class="table table-hover align-middle mb-0 small" data-paginate="10">
+              <thead class="table-light">
+                <tr>
+                  <th class="ps-3">Name</th>
+                  <th>Email</th>
+                  <th>Postcode</th>
+                  <th>Phone</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for g in golden_records %}
+                <tr>
+                  <td class="ps-3 fw-semibold">{{ g.first_name or '' }} {{ g.last_name or '' }}</td>
+                  <td>{{ g.email or '&mdash;' }}</td>
+                  <td>{{ g.postcode or '&mdash;' }}</td>
+                  <td>{{ g.phone or '&mdash;' }}</td>
+                  <td class="pe-3">
+                    <a href="{{ url_for('golden_records.detail', id=g.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        {% else %}
+        <p class="text-muted small">No golden records matched.</p>
+        {% endif %}
+      </div>
+    </div>
+
+  {% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+  // ── Chevron rotation on collapse ─────────────────────────────────────────
+  document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(function (btn) {
+    var target = document.querySelector(btn.getAttribute('data-bs-target'));
+    var chevron = btn.querySelector('.section-chevron');
+    if (!target || !chevron) return;
+    target.addEventListener('hide.bs.collapse', function () {
+      chevron.style.transform = 'rotate(180deg)';
+      chevron.style.transition = 'transform 0.2s';
+    });
+    target.addEventListener('show.bs.collapse', function () {
+      chevron.style.transform = '';
+      chevron.style.transition = 'transform 0.2s';
+    });
+  });
+
+  // ── Client-side pagination ────────────────────────────────────────────────
+  document.querySelectorAll('table[data-paginate]').forEach(function (table) {
+    var pageSize = parseInt(table.getAttribute('data-paginate'), 10);
+    var tbody = table.querySelector('tbody');
+    var rows = Array.from(tbody.querySelectorAll('tr'));
+    if (rows.length <= pageSize) return;
+
+    var totalPages = Math.ceil(rows.length / pageSize);
+    var currentPage = 1;
+
+    function showPage(page) {
+      currentPage = page;
+      rows.forEach(function (row, i) {
+        row.style.display =
+          i >= (page - 1) * pageSize && i < page * pageSize ? '' : 'none';
+      });
+      renderControls();
+    }
+
+    function renderControls() {
+      var existing = table.parentElement.querySelector('.ra-pagination');
+      if (existing) existing.remove();
+
+      var nav = document.createElement('div');
+      nav.className =
+        'ra-pagination d-flex align-items-center justify-content-between px-3 py-2 border-top small text-muted';
+
+      var info = document.createElement('span');
+      var start = (currentPage - 1) * pageSize + 1;
+      var end = Math.min(currentPage * pageSize, rows.length);
+      info.textContent =
+        'Showing ' + start + '\u2013' + end + ' of ' + rows.length;
+      nav.appendChild(info);
+
+      var btns = document.createElement('div');
+      btns.className = 'd-flex gap-1';
+
+      var prev = document.createElement('button');
+      prev.className = 'btn btn-sm btn-outline-secondary py-0 px-2';
+      prev.textContent = '\u2190 Prev';
+      prev.disabled = currentPage === 1;
+      prev.addEventListener('click', function () { showPage(currentPage - 1); });
+      btns.appendChild(prev);
+
+      var startP = Math.max(1, currentPage - 2);
+      var endP = Math.min(totalPages, currentPage + 2);
+      for (var p = startP; p <= endP; p++) {
+        (function (pg) {
+          var btn = document.createElement('button');
+          btn.className =
+            'btn btn-sm py-0 px-2 ' +
+            (pg === currentPage ? 'btn-primary' : 'btn-outline-secondary');
+          btn.textContent = pg;
+          btn.addEventListener('click', function () { showPage(pg); });
+          btns.appendChild(btn);
+        })(p);
+      }
+
+      var next = document.createElement('button');
+      next.className = 'btn btn-sm btn-outline-secondary py-0 px-2';
+      next.textContent = 'Next \u2192';
+      next.disabled = currentPage === totalPages;
+      next.addEventListener('click', function () { showPage(currentPage + 1); });
+      btns.appendChild(next);
+
+      nav.appendChild(btns);
+      table.parentElement.appendChild(nav);
+    }
+
+    showPage(1);
+  });
+
+});
+</script>
+{% endblock %}

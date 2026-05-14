@@ -4,81 +4,171 @@
 
 {% block content %}
 
+  {# ── Page header ── #}
   <div class="mb-4">
     <h1 class="h4 mb-0 fw-semibold">Match Review Dashboard</h1>
-    <p class="text-muted small mt-1 mb-0">Overview of match candidates and golden record status</p>
+    <p class="text-muted small mt-1 mb-0">Match candidate workflow &mdash; steward review queue and data quality status</p>
   </div>
 
-  <!-- Summary cards -->
+  {# ── Top summary row: Review Workload (wide) + Data Quality Snapshot (narrow) ── #}
   <div class="row g-3 mb-4">
-    {% for card in [
-        ('Pending Review',    '14', 'bi-hourglass-split',  'ra-card-amber'),
-        ('Strong Matches',    '6',  'bi-intersect',        'ra-card-yellow'),
-        ('Golden Records',    '31', 'bi-star',             'ra-card-green'),
-        ('Rejected Matches',  '5',  'bi-x-circle',         'ra-card-grey')
-    ] %}
-    <div class="col-sm-6 col-xl-3">
-      <div class="ra-summary-card {{ card[3] }} d-flex align-items-center gap-3 p-3 rounded-3">
-        <i class="bi {{ card[2] }} ra-card-icon"></i>
-        <div>
-          <div class="ra-card-value">{{ card[1] }}</div>
-          <div class="ra-card-label">{{ card[0] }}</div>
+
+    {# Review Workload #}
+    <div class="col-lg-7">
+      <div class="card border-0 border-start border-warning border-3 shadow-sm h-100">
+        <div class="card-body">
+          <h6 class="text-uppercase text-muted fw-semibold small mb-3 letter-spacing-1">Review Workload</h6>
+          <div class="d-flex align-items-baseline gap-2 mb-1">
+            <span class="display-5 fw-bold text-dark">{{ stats.pending_review }}</span>
+            <span class="text-muted">pending candidates</span>
+          </div>
+          {% set total = stats.pending_review + stats.approved_matches + stats.rejected_matches %}
+          <p class="text-muted small mb-3">
+            {% if stats.pending_review == 0 %}
+              All {{ total }} candidate{{ 's' if total != 1 else '' }} have been reviewed.
+            {% elif total == 0 %}
+              No match candidates have been created yet.
+            {% else %}
+              {{ stats.pending_review }} of {{ total }} match candidate{{ 's' if total != 1 else '' }} still require{{ '' if total != 1 else 's' }} a decision.
+            {% endif %}
+          </p>
+          {% if priority_queue %}
+          <p class="small mb-3">
+            <span class="text-muted">Next up:</span>
+            <strong class="text-dark">MC-{{ "%04d"|format(priority_queue[0].id) }}</strong>
+            &mdash;
+            {{ priority_queue[0].record_a.first_name or '' }} {{ priority_queue[0].record_a.last_name or '' }}
+            &amp;
+            {{ priority_queue[0].record_b.first_name or '' }} {{ priority_queue[0].record_b.last_name or '' }}
+            <span class="badge bg-warning text-dark ms-1">{{ (priority_queue[0].match_score * 100) | int }}%</span>
+          </p>
+          {% endif %}
+          <hr class="my-2">
+          <div class="row g-2 text-center">
+            <div class="col-6">
+              <div class="small text-muted">Approved</div>
+              <div class="fw-semibold text-success">{{ stats.approved_matches }}</div>
+            </div>
+            <div class="col-6">
+              <div class="small text-muted">Rejected</div>
+              <div class="fw-semibold text-danger">{{ stats.rejected_matches }}</div>
+            </div>
+          </div>
+          <div class="mt-3">
+            <a href="{{ url_for('match_queue.index') }}" class="btn btn-sm btn-outline-secondary">
+              View queue <i class="bi bi-arrow-right" aria-hidden="true"></i>
+            </a>
+          </div>
         </div>
       </div>
     </div>
-    {% endfor %}
-  </div>
 
-  <!-- Recent match candidates table -->
-  <div class="card border-0 shadow-sm">
-    <div class="card-header bg-white border-bottom">
-      <span class="fw-semibold">Recent Match Candidates</span>
-    </div>
-    <div class="card-body p-0">
-      <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-          <thead class="table-light">
-            <tr>
-              <th scope="col">Candidate ID</th>
-              <th scope="col">Source A</th>
-              <th scope="col">Source B</th>
-              <th scope="col">Match Score</th>
-              <th scope="col">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% set candidates = [
-              ('MC-0051', 'CRM – John A. Smith',     'ERP – J. Smith',          '96%', 'Pending Review'),
-              ('MC-0050', 'CRM – Patricia Patel',    'LEGACY – P. Patel',       '91%', 'Approved'),
-              ('MC-0049', 'ERP – C. Johnson',        'CRM – Charles Johnson',   '88%', 'Pending Review'),
-              ('MC-0048', 'LEGACY – Sara Ahmed',     'CRM – S. Ahmed',          '74%', 'Rejected'),
-              ('MC-0047', 'ERP – L. Williams',       'LEGACY – Laura Williams', '95%', 'Approved'),
-            ] %}
-            {% for c in candidates %}
-            <tr>
-              <td><span class="ra-case-id fw-medium">{{ c[0] }}</span></td>
-              <td class="small">{{ c[1] }}</td>
-              <td class="small">{{ c[2] }}</td>
-              <td>
-                <span class="fw-medium {% if c[3]|int >= 90 %}text-success{% elif c[3]|int >= 75 %}text-warning{% else %}text-danger{% endif %}">
-                  {{ c[3] }}
-                </span>
-              </td>
-              <td>
-                {% if c[4] == 'Pending Review' %}
-                  <span class="badge ra-badge-open">Pending Review</span>
-                {% elif c[4] == 'Approved' %}
-                  <span class="badge ra-badge-resolved">Approved</span>
-                {% else %}
-                  <span class="badge ra-badge-assigned">Rejected</span>
-                {% endif %}
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+    {# Data Quality Snapshot #}
+    <div class="col-lg-5">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <h6 class="text-uppercase text-muted fw-semibold small mb-3 letter-spacing-1">Data Quality Snapshot</h6>
+          <dl class="row mb-0 small">
+            <dt class="col-8 fw-normal text-muted">Active source records</dt>
+            <dd class="col-4 text-end fw-semibold mb-2">{{ stats.active_records }}</dd>
+
+            <dt class="col-8 fw-normal text-muted">Archived source records</dt>
+            <dd class="col-4 text-end fw-semibold mb-2">{{ stats.archived_records }}</dd>
+
+            <dt class="col-8 fw-normal text-muted border-top pt-2">Golden Records</dt>
+            <dd class="col-4 text-end fw-semibold border-top pt-2 mb-0">{{ stats.golden_records }}</dd>
+          </dl>
+          <div class="mt-3 d-flex gap-2 flex-wrap">
+            <a href="{{ url_for('source_records.index') }}" class="btn btn-sm btn-outline-secondary">
+              View records <i class="bi bi-arrow-right" aria-hidden="true"></i>
+            </a>
+            <a href="{{ url_for('golden_records.index') }}" class="btn btn-sm btn-outline-secondary">
+              View golden records <i class="bi bi-arrow-right" aria-hidden="true"></i>
+            </a>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
+
+  </div>{# /top summary row #}
+
+  {# ── Main content row: Priority Match Queue (wide) + Recent Decisions (narrow) ── #}
+  <div class="row g-3">
+
+    {# Priority Match Queue #}
+    <div class="{{ 'col-lg-8' if user_role == 'administrator' else 'col-12' }}">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-bottom">
+          <span class="fw-semibold">Priority Match Queue</span>
+          <span class="text-muted fw-normal small ms-2">top 5 pending &mdash; highest score first</span>
+        </div>
+        <div class="card-body p-0">
+          {% if priority_queue %}
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th scope="col" class="small ps-3">Candidate</th>
+                <th scope="col" class="small">Record A</th>
+                <th scope="col" class="small">Record B</th>
+                <th scope="col" class="small">Score</th>
+                <th scope="col" class="small"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for candidate in priority_queue %}
+              <tr>
+                <td class="small text-muted ps-3">MC-{{ "%04d"|format(candidate.id) }}</td>
+                <td class="small">{{ candidate.record_a.first_name or '' }} {{ candidate.record_a.last_name or '' }}</td>
+                <td class="small">{{ candidate.record_b.first_name or '' }} {{ candidate.record_b.last_name or '' }}</td>
+                <td class="small fw-semibold">{{ (candidate.match_score * 100) | int }}%</td>
+                <td class="pe-3">
+                  <a href="{{ url_for('match_queue.detail', id=candidate.id) }}" class="btn btn-sm btn-outline-primary">{{ 'Review' if user_role == 'data_steward' else 'View' }}</a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% else %}
+          <p class="text-muted small py-3 px-3 mb-0">No pending candidates. Queue is clear.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {# Right-hand panel — administrators only #}
+    {% if user_role == 'administrator' %}
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-bottom fw-semibold">Recent Activity</div>
+        <div class="card-body p-0">
+          {% if recent_activity %}
+          <ul class="list-group list-group-flush small">
+            {% for entry in recent_activity %}
+            <li class="list-group-item px-3 py-2">
+              <div class="d-flex justify-content-between align-items-start">
+                <span class="badge bg-light text-dark border">{{ entry.action }}</span>
+                <span class="text-muted" style="font-size:0.75rem">{{ entry.created_at.strftime('%d %b %H:%M') }}</span>
+              </div>
+              {% if entry.detail %}
+              <div class="text-muted mt-1" style="font-size:0.8rem">{{ entry.detail }}</div>
+              {% endif %}
+              <div class="text-muted mt-1" style="font-size:0.75rem">{{ entry.user.username if entry.user else 'System' }}</div>
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <p class="text-muted small py-3 px-3 mb-0">No activity recorded yet.</p>
+          {% endif %}
+        </div>
+        <div class="card-footer bg-white border-top pt-2 pb-2 px-3">
+          <a href="{{ url_for('audit_log.index') }}" class="btn btn-sm btn-outline-secondary">
+            View audit log <i class="bi bi-arrow-right" aria-hidden="true"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>{# /main content row #}
 
 {% endblock %}

@@ -4,12 +4,14 @@
 
 {% block content %}
 
-  <div class="mb-4">
-    <a href="{{ url_for('match_queue.index') }}" class="text-muted small text-decoration-none">
-      <i class="bi bi-arrow-left"></i> Back to Match Queue
-    </a>
-    <h1 class="h4 mb-0 fw-semibold mt-2">Match Candidate MC-{{ '%04d' % candidate.id }}</h1>
-    <p class="text-muted small mt-1 mb-0">Review the two source records identified as potential duplicates</p>
+  <div class="mb-4 d-flex align-items-center gap-3">
+    <button type="button" onclick="history.back()" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-arrow-left" aria-hidden="true"></i> Back
+    </button>
+    <div>
+      <h1 class="h4 mb-0 fw-semibold mt-0">Match Candidate MC-{{ '%04d' % candidate.id }}</h1>
+      <p class="text-muted small mt-1 mb-0">Review the two source records identified as potential duplicates</p>
+    </div>
   </div>
 
   {% with messages = get_flashed_messages(with_categories=true) %}
@@ -92,6 +94,45 @@
     </div>
     {% endfor %}
 
+  </div>
+
+  <!-- Match Explanation -->
+  <div class="card border-0 shadow-sm mt-4">
+    <div class="card-header bg-white border-bottom fw-semibold">
+      <i class="bi bi-search me-1"></i> Match Explanation
+    </div>
+    <div class="card-body p-0">
+      <table class="table table-sm align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th scope="col" class="small">Field</th>
+            <th scope="col" class="small">Record A</th>
+            <th scope="col" class="small">Record B</th>
+            <th scope="col" class="small">Result</th>
+            <th scope="col" class="small">Note</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in explanation %}
+          <tr>
+            <td class="small fw-medium text-muted">{{ row.field }}</td>
+            <td class="small">{{ row.a_val }}</td>
+            <td class="small">{{ row.b_val }}</td>
+            <td class="small">
+              {% if row.match is none %}
+                <span class="badge bg-light text-secondary border">Unknown</span>
+              {% elif row.match %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle">Match</span>
+              {% else %}
+                <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Mismatch</span>
+              {% endif %}
+            </td>
+            <td class="small text-muted">{{ row.note }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
 
   {% if current_user.role == 'data_steward' and candidate.status == 'pending' %}
