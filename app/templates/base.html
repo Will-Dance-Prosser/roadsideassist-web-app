@@ -32,8 +32,7 @@
 
             {% for label, icon, endpoint in [
                 ('Data Sources',    'bi-hdd-stack',      ''),
-                ('Reports',         'bi-bar-chart-line', ''),
-                ('Audit Log',       'bi-journal-text',   '')
+                ('Reports',         'bi-bar-chart-line', '')
             ] %}
             <li>
               <span class="ra-nav-link disabled">
@@ -42,6 +41,16 @@
               </span>
             </li>
             {% endfor %}
+
+            {% if current_user.is_authenticated and current_user.role == 'administrator' %}
+            <li>
+              <a href="{{ url_for('audit_log.index') }}"
+                 class="ra-nav-link {% if request.endpoint == 'audit_log.index' %}active{% endif %}">
+                <i class="bi bi-journal-text"></i>
+                <span>Audit Log</span>
+              </a>
+            </li>
+            {% endif %}
 
             <li>
               <a href="{{ url_for('golden_records.index') }}"
