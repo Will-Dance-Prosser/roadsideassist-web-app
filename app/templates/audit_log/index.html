@@ -14,22 +14,85 @@
     </div>
   </div>
 
+  {# Filter form #}
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-body py-3">
+      <form method="get" action="{{ url_for('audit_log.index') }}" class="row g-2 align-items-end">
+
+        <div class="col-12 col-sm-6 col-lg-3">
+          <label for="q" class="form-label form-label-sm mb-1 text-muted">Search</label>
+          <input type="text" id="q" name="q" value="{{ q }}"
+                 class="form-control form-control-sm" placeholder="Action, type, detail…">
+        </div>
+
+        <div class="col-6 col-sm-4 col-lg-2">
+          <label for="user_id" class="form-label form-label-sm mb-1 text-muted">User</label>
+          <select id="user_id" name="user_id" class="form-select form-select-sm">
+            <option value="">All users</option>
+            {% for u in users %}
+            <option value="{{ u.id }}" {{ 'selected' if user_id == u.id }}>{{ u.username }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="col-6 col-sm-4 col-lg-2">
+          <label for="action" class="form-label form-label-sm mb-1 text-muted">Action</label>
+          <select id="action" name="action" class="form-select form-select-sm">
+            <option value="">All actions</option>
+            {% for a in actions %}
+            <option value="{{ a }}" {{ 'selected' if action == a }}>{{ a }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="col-6 col-sm-4 col-lg-2">
+          <label for="target_type" class="form-label form-label-sm mb-1 text-muted">Target type</label>
+          <select id="target_type" name="target_type" class="form-select form-select-sm">
+            <option value="">All types</option>
+            {% for t in target_types %}
+            <option value="{{ t }}" {{ 'selected' if target_type == t }}>{{ t }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="col-6 col-sm-4 col-lg-2">
+          <label for="sort" class="form-label form-label-sm mb-1 text-muted">Sort</label>
+          <select id="sort" name="sort" class="form-select form-select-sm">
+            <option value="created_desc" {{ 'selected' if sort == 'created_desc' }}>Newest first</option>
+            <option value="created_asc"  {{ 'selected' if sort == 'created_asc'  }}>Oldest first</option>
+          </select>
+        </div>
+
+        <div class="col-12 col-lg-1 d-flex gap-2">
+          <button type="submit" class="btn btn-sm btn-primary w-100">Apply</button>
+        </div>
+        {% if q or user_id or action or target_type or sort != 'created_desc' %}
+        <div class="col-12">
+          <a href="{{ url_for('audit_log.index') }}" class="small text-muted">Clear filters</a>
+        </div>
+        {% endif %}
+
+      </form>
+    </div>
+  </div>
+
+  {# Results table #}
   <div class="card border-0 shadow-sm">
     <div class="card-header bg-white border-bottom d-flex align-items-center justify-content-between">
-      <span class="fw-semibold">All Entries</span>
-      <span class="text-muted small">{{ entries|length }} entr{{ 'y' if entries|length == 1 else 'ies' }}</span>
+      <span class="fw-semibold">Entries</span>
+      <span class="text-muted small">{{ pagination.total }} total</span>
     </div>
     <div class="card-body p-0">
       <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
           <thead class="table-light">
             <tr>
-              <th scope="col">Date / Time</th>
-              <th scope="col">User</th>
-              <th scope="col">Action</th>
-              <th scope="col">Target Type</th>
-              <th scope="col">Target ID</th>
-              <th scope="col">Detail</th>
+              <th scope="col" class="small">Date / Time</th>
+              <th scope="col" class="small">User</th>
+              <th scope="col" class="small">Action</th>
+              <th scope="col" class="small">Target type</th>
+              <th scope="col" class="small">Target ID</th>
+              <th scope="col" class="small">Detail</th>
             </tr>
           </thead>
           <tbody>
@@ -50,13 +113,52 @@
             </tr>
             {% else %}
             <tr>
-              <td colspan="6" class="text-center text-muted small py-4">No audit log entries found.</td>
+              <td colspan="6" class="text-center text-muted small py-4">No audit log entries match your filters.</td>
             </tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
     </div>
+
+    {# Pagination controls — only shown when there is more than one page #}
+    {% if pagination.pages > 1 %}
+    <div class="card-footer bg-white border-top d-flex align-items-center justify-content-between">
+      <span class="text-muted small">
+        Page {{ pagination.page }} of {{ pagination.pages }}
+      </span>
+      <nav aria-label="Audit log pagination">
+        <ul class="pagination pagination-sm mb-0">
+          <li class="page-item {{ 'disabled' if not pagination.has_prev }}">
+            <a class="page-link"
+               href="{{ url_for('audit_log.index', q=q, user_id=user_id, action=action, target_type=target_type, sort=sort, page=pagination.prev_num) if pagination.has_prev else '#' }}"
+               aria-label="Previous">
+              <i class="bi bi-chevron-left" aria-hidden="true"></i>
+            </a>
+          </li>
+          {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+            {% if p %}
+            <li class="page-item {{ 'active' if p == pagination.page }}">
+              <a class="page-link"
+                 href="{{ url_for('audit_log.index', q=q, user_id=user_id, action=action, target_type=target_type, sort=sort, page=p) }}">{{ p }}</a>
+            </li>
+            {% else %}
+            <li class="page-item disabled"><span class="page-link">…</span></li>
+            {% endif %}
+          {% endfor %}
+          <li class="page-item {{ 'disabled' if not pagination.has_next }}">
+            <a class="page-link"
+               href="{{ url_for('audit_log.index', q=q, user_id=user_id, action=action, target_type=target_type, sort=sort, page=pagination.next_num) if pagination.has_next else '#' }}"
+               aria-label="Next">
+              <i class="bi bi-chevron-right" aria-hidden="true"></i>
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+    {% endif %}
+
   </div>
 
 {% endblock %}
+
