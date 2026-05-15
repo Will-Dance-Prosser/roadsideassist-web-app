@@ -1,8 +1,8 @@
 import pytest
-from datetime import date
+from datetime import date, datetime
 from app import create_app
 from app.extensions import db
-from app.models import SourceRecord, SourceSystem, User
+from app.models import GoldenRecord, GoldenRecordLink, MatchCandidate, SourceRecord, SourceSystem, User
 from config import TestingConfig
 
 
@@ -312,5 +312,224 @@ def test_data_analyst_cannot_archive(client, app):
     record_id, _ = _seed_record_with_system(app)
     _login_as(client, app, "data_analyst")
     response = client.post(f"/source-records/{record_id}/archive")
+    assert response.status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# Status filter tests
+# ---------------------------------------------------------------------------
+
+def _seed_active_and_archived(app):
+    """Seed one active and one archived source record."""
+    with app.app_context():
+        system = SourceSystem(name="FilterCRM")
+        db.session.add(system)
+        db.session.flush()
+        active = SourceRecord(source_system_id=system.id, external_id="ACTIVE-001", first_name="Alice", last_name="A")
+        archived = SourceRecord(source_system_id=system.id, external_id="ARCHIVED-001", first_name="Bob", last_name="B",
+                                is_archived=True, archived_at=datetime.utcnow())
+        db.session.add_all([active, archived])
+        db.session.commit()
+
+
+def test_default_view_shows_active_records_only(client, app):
+    _seed_active_and_archived(app)
+    _login_as(client, app, "data_steward")
+    response = client.get("/source-records")
+    assert response.status_code == 200
+    assert b"ACTIVE-001" in response.data
+    assert b"ARCHIVED-001" not in response.data
+
+
+def test_status_archived_shows_archived_records(client, app):
+    _seed_active_and_archived(app)
+    _login_as(client, app, "data_steward")
+    response = client.get("/source-records?status=archived")
+    assert response.status_code == 200
+    assert b"ARCHIVED-001" in response.data
+    assert b"ACTIVE-001" not in response.data
+
+
+def test_status_all_shows_all_records(client, app):
+    _seed_active_and_archived(app)
+    _login_as(client, app, "data_steward")
+    response = client.get("/source-records?status=all")
+    assert response.status_code == 200
+    assert b"ACTIVE-001" in response.data
+    assert b"ARCHIVED-001" in response.data
+
+
+# ---------------------------------------------------------------------------
+# Unarchive tests
+# ---------------------------------------------------------------------------
+
+def _seed_archived_record(app):
+    with app.app_context():
+        system = SourceSystem(name="RestoreCRM")
+        db.session.add(system)
+        db.session.flush()
+        record = SourceRecord(source_system_id=system.id, external_id="RESTORE-001", first_name="Carol", last_name="C",
+                              is_archived=True, archived_at=datetime.utcnow())
+        db.session.add(record)
+        db.session.commit()
+        return record.id
+
+
+def test_administrator_can_unarchive(client, app):
+    record_id = _seed_archived_record(app)
+    _login_as(client, app, "administrator")
+    response = client.post(f"/source-records/{record_id}/unarchive", follow_redirects=True)
+    assert response.status_code == 200
+    with app.app_context():
+        record = db.session.get(SourceRecord, record_id)
+        assert record.is_archived is False
+        assert record.archived_at is None
+
+
+def test_data_steward_cannot_unarchive(client, app):
+    record_id = _seed_archived_record(app)
+    _login_as(client, app, "data_steward")
+    response = client.post(f"/source-records/{record_id}/unarchive")
+    assert response.status_code == 403
+
+
+def test_data_analyst_cannot_unarchive(client, app):
+    record_id = _seed_archived_record(app)
+    _login_as(client, app, "data_analyst")
+    response = client.post(f"/source-records/{record_id}/unarchive")
+    assert response.status_code == 403
+
+
+def test_unarchive_is_post_only(client, app):
+    record_id = _seed_archived_record(app)
+    _login_as(client, app, "administrator")
+    response = client.get(f"/source-records/{record_id}/unarchive")
+    assert response.status_code == 405
+
+
+# ---------------------------------------------------------------------------
+# Permanent delete tests
+# ---------------------------------------------------------------------------
+
+def _seed_clean_archived_record(app):
+    """Archived record with no match or golden record links."""
+    with app.app_context():
+        system = SourceSystem(name="DelCRM")
+        db.session.add(system)
+        db.session.flush()
+        record = SourceRecord(
+            source_system_id=system.id, external_id="DEL-001",
+            first_name="Dave", last_name="D",
+            is_archived=True, archived_at=datetime.utcnow(),
+        )
+        db.session.add(record)
+        db.session.commit()
+        return record.id
+
+
+def test_archived_record_cannot_be_edited(client, app):
+    record_id = _seed_archived_record(app)
+    _login_as(client, app, "data_steward")
+    response = client.get(f"/source-records/{record_id}/edit", follow_redirects=True)
+    assert b"cannot be edited" in response.data
+
+
+def test_administrator_cannot_delete_active_record(client, app):
+    record_id, _ = _seed_record_with_system(app)
+    _login_as(client, app, "administrator")
+    response = client.post(f"/source-records/{record_id}/delete",
+                           data={"confirmation": "DELETE"}, follow_redirects=True)
+    assert response.status_code == 200
+    with app.app_context():
+        assert db.session.get(SourceRecord, record_id) is not None
+
+
+def test_administrator_cannot_delete_record_with_match_candidate_link(client, app):
+    with app.app_context():
+        system = SourceSystem(name="MatchCRM")
+        db.session.add(system)
+        db.session.flush()
+        r1 = SourceRecord(source_system_id=system.id, external_id="MC-A", first_name="A", last_name="A",
+                          is_archived=True, archived_at=datetime.utcnow())
+        r2 = SourceRecord(source_system_id=system.id, external_id="MC-B", first_name="B", last_name="B")
+        db.session.add_all([r1, r2])
+        db.session.flush()
+        candidate = MatchCandidate(record_a_id=r1.id, record_b_id=r2.id, match_score=0.9)
+        db.session.add(candidate)
+        db.session.commit()
+        r1_id = r1.id
+
+    _login_as(client, app, "administrator")
+    response = client.post(f"/source-records/{r1_id}/delete",
+                           data={"confirmation": "DELETE"}, follow_redirects=True)
+    assert b"match or golden record history" in response.data
+    with app.app_context():
+        assert db.session.get(SourceRecord, r1_id) is not None
+
+
+def test_administrator_cannot_delete_record_with_golden_record_link(client, app):
+    with app.app_context():
+        system = SourceSystem(name="GoldenCRM")
+        db.session.add(system)
+        db.session.flush()
+        record = SourceRecord(source_system_id=system.id, external_id="GR-A", first_name="G", last_name="G",
+                              is_archived=True, archived_at=datetime.utcnow())
+        db.session.add(record)
+        db.session.flush()
+        golden = GoldenRecord(first_name="G", last_name="G")
+        db.session.add(golden)
+        db.session.flush()
+        db.session.add(GoldenRecordLink(golden_record_id=golden.id, source_record_id=record.id))
+        db.session.commit()
+        record_id = record.id
+
+    _login_as(client, app, "administrator")
+    response = client.post(f"/source-records/{record_id}/delete",
+                           data={"confirmation": "DELETE"}, follow_redirects=True)
+    assert b"match or golden record history" in response.data
+    with app.app_context():
+        assert db.session.get(SourceRecord, record_id) is not None
+
+
+def test_administrator_can_permanently_delete_clean_archived_record(client, app):
+    record_id = _seed_clean_archived_record(app)
+    _login_as(client, app, "administrator")
+    response = client.post(f"/source-records/{record_id}/delete",
+                           data={"confirmation": "DELETE"}, follow_redirects=True)
+    assert response.status_code == 200
+    with app.app_context():
+        assert db.session.get(SourceRecord, record_id) is None
+
+
+def test_wrong_confirmation_does_not_delete(client, app):
+    record_id = _seed_clean_archived_record(app)
+    _login_as(client, app, "administrator")
+    response = client.post(f"/source-records/{record_id}/delete",
+                           data={"confirmation": "delete"}, follow_redirects=True)
+    assert response.status_code == 200
+    with app.app_context():
+        assert db.session.get(SourceRecord, record_id) is not None
+
+
+def test_delete_is_post_only(client, app):
+    record_id = _seed_clean_archived_record(app)
+    _login_as(client, app, "administrator")
+    response = client.get(f"/source-records/{record_id}/delete")
+    assert response.status_code == 405
+
+
+def test_data_steward_cannot_delete(client, app):
+    record_id = _seed_clean_archived_record(app)
+    _login_as(client, app, "data_steward")
+    response = client.post(f"/source-records/{record_id}/delete",
+                           data={"confirmation": "DELETE"})
+    assert response.status_code == 403
+
+
+def test_data_analyst_cannot_delete(client, app):
+    record_id = _seed_clean_archived_record(app)
+    _login_as(client, app, "data_analyst")
+    response = client.post(f"/source-records/{record_id}/delete",
+                           data={"confirmation": "DELETE"})
     assert response.status_code == 403
 

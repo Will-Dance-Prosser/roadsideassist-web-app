@@ -16,8 +16,7 @@ DEMO_USERS = [
 @click.command("seed-demo-users")
 @with_appcontext
 def seed_demo_users():
-    #Create demo users for local development if they do not already exist.
-
+    # Create demo users for local development if they don't already exist
     password = os.environ.get("DEMO_USER_PASSWORD", "demo-password-123")
 
     db.create_all()
@@ -84,11 +83,11 @@ DEMO_MATCH_RULES = [
 @click.command("seed-demo-mdm-data")
 @with_appcontext
 def seed_demo_mdm_data():
-    """Create demo MDM source systems, records, match candidates and rules."""
+    # Seeds source systems, records, match candidates and rules for demo/dev use
 
     db.create_all()
 
-    # --- Source Systems 
+    # Source Systems
     systems = {}
     for data in DEMO_SOURCE_SYSTEMS:
         existing = SourceSystem.query.filter_by(name=data["name"]).first()
@@ -106,7 +105,7 @@ def seed_demo_mdm_data():
 
 
 
-    # --- Source Records 
+    # Source Records
     records = {}
     for data in DEMO_SOURCE_RECORDS:
         existing = SourceRecord.query.filter_by(external_id=data["external_id"]).first()
@@ -133,8 +132,8 @@ def seed_demo_mdm_data():
 
 
 
-    # --- Match Candidates 
-    # Each tuple: (external_id_a, external_id_b, score, status)
+    # Match Candidates - each tuple is (ext_id_a, ext_id_b, score, status)
+    # comments explain why each pair was chosen
     demo_candidates = [
         ("CRM-001", "WEB-001", 0.98, "approved"),   # same person, exact email+phone+dob match
         ("CRM-002", "WEB-002", 0.91, "approved"),   # same person, exact email match
@@ -165,9 +164,7 @@ def seed_demo_mdm_data():
 
     db.session.commit()
 
-    # --- Match Rules 
-
-
+    # Match Rules
     for data in DEMO_MATCH_RULES:
         existing = MatchRule.query.filter_by(field_name=data["field_name"]).first()
         if existing:
@@ -185,7 +182,7 @@ def seed_demo_mdm_data():
 
 
 
-    # --- Audit Log 
+    # Drop a single audit log entry so there's something to show in the UI
     existing_log = AuditLog.query.filter_by(action="demo_seed").first()
     if not existing_log:
         db.session.add(AuditLog(
@@ -202,11 +199,12 @@ def seed_demo_mdm_data():
 @click.command("reset-demo-mdm-data")
 @with_appcontext
 def reset_demo_mdm_data():
-    """Delete all MDM demo data (not users) and re-seed from scratch."""
+    # Wipe all MDM demo data (leaves users alone) then re-seeds from scratch
+    # useful when the seed data gets into a messy state during testing
 
     click.echo("Deleting existing MDM demo data...")
 
-    # Delete in safe order to respect foreign key constraints
+    # Order matters here - delete children before parents to avoid FK violations
     AuditLog.query.delete()
     MergeDecision.query.delete()
     GoldenRecordLink.query.delete()

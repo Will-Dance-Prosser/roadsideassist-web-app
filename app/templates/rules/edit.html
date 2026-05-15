@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Rule | MemberMatch{% endblock %}
+
+{% block content %}
+
+  <div class="mb-4 d-flex align-items-center gap-3">
+    <button type="button" onclick="history.back()" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-arrow-left"></i> Back
+    </button>
+    <div>
+      <h1 class="h4 mb-0 fw-semibold">Edit Rule</h1>
+      <p class="text-muted small mt-1 mb-0">{{ rule.field_name }} &mdash; {{ rule.match_method }}</p>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm" style="max-width: 520px;">
+    <div class="card-body p-4">
+      <form method="POST" novalidate>
+        {{ form.hidden_tag() }}
+
+        <div class="row g-3">
+
+          <div class="col-12">
+            <label class="form-label small fw-medium" for="field_name">Field Name <span class="text-danger">*</span></label>
+            {{ form.field_name(class="form-control form-control-sm" + (" is-invalid" if form.field_name.errors else ""), id="field_name") }}
+            {% for error in form.field_name.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="col-12">
+            <label class="form-label small fw-medium" for="match_method">Match Method <span class="text-danger">*</span></label>
+            {{ form.match_method(class="form-select form-select-sm" + (" is-invalid" if form.match_method.errors else ""), id="match_method") }}
+            {% for error in form.match_method.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="col-12">
+            <label class="form-label small fw-medium" for="weight">Weight <span class="text-danger">*</span></label>
+            {{ form.weight(class="form-control form-control-sm" + (" is-invalid" if form.weight.errors else ""), id="weight", placeholder="0.0 – 1.0") }}
+            {% for error in form.weight.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+            <div class="form-text">Value between 0 and 1. Higher weight means more influence on the match score.</div>
+          </div>
+
+          <div class="col-12">
+            <div class="form-check">
+              {{ form.is_active(class="form-check-input", id="is_active") }}
+              <label class="form-check-label small" for="is_active">Active</label>
+            </div>
+            <div class="form-text">Inactive rules are ignored during matching.</div>
+          </div>
+
+        </div>
+
+        <div class="mt-4 d-flex gap-2">
+          {{ form.submit(class="btn btn-sm btn-primary") }}
+          <a href="{{ url_for('rules.index') }}" class="btn btn-sm btn-outline-secondary">Cancel</a>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+{% endblock %}

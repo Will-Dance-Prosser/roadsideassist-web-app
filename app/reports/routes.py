@@ -1,16 +1,17 @@
 from flask import Blueprint, render_template
-from flask_login import login_required
-
 from app.auth.decorators import role_required
 from app.models import AuditLog, GoldenRecord, MatchCandidate, SourceRecord, SourceSystem
 
 reports_bp = Blueprint("reports", __name__)
 
+ALLOWED_ROLES = ("administrator", "data_steward", "data_analyst")
 
-@reports_bp.route("/reports")
-@login_required
-@role_required("administrator", "data_steward", "data_analyst")
+
+@reports_bp.route("/reports", methods=["GET"])
+@role_required(*ALLOWED_ROLES)
 def index():
+    # Builds summary stats for the reports page
+
     # Match Outcomes
     match_outcomes = {
         "pending":  MatchCandidate.query.filter_by(status="pending").count(),
@@ -26,13 +27,9 @@ def index():
         "source_systems":   SourceSystem.query.count(),
     }
 
-    # Stewardship Activity — latest 10 approve/reject audit entries
+    # Stewardship Activity — latest 10 approve/reject audit entries - 10 feels enough for now
     stewardship = (
-        AuditLog.query
-        .filter(AuditLog.action.in_(["match_approved", "match_rejected"]))
-        .order_by(AuditLog.created_at.desc())
-        .limit(10)
-        .all()
+        AuditLog.query.filter(AuditLog.action.in_(["match_approved", "match_rejected"])).order_by(AuditLog.created_at.desc()).limit(10).all()
     )
 
     return render_template(

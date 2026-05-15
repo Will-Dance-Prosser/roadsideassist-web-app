@@ -14,11 +14,8 @@ def index():
     pending_count = MatchCandidate.query.filter_by(status="pending").count()
 
     # Highest pending match score, expressed as an integer percentage or None
-    highest_score_row = (
-        db.session.query(func.max(MatchCandidate.match_score))
-        .filter(MatchCandidate.status == "pending")
-        .scalar()
-    )
+    highest_score_row = (db.session.query(func.max(MatchCandidate.match_score)).filter(MatchCandidate.status == "pending").scalar())
+
     highest_score = int(highest_score_row * 100) if highest_score_row is not None else None
 
     stats = {
@@ -30,14 +27,10 @@ def index():
         "archived_records":    SourceRecord.query.filter_by(is_archived=True).count(),
         "highest_score":       highest_score,
     }
-    priority_queue = (
-        MatchCandidate.query
-        .filter_by(status="pending")
-        .order_by(MatchCandidate.match_score.desc())
-        .limit(5)
-        .all()
-    )
-    # Audit log data is only surfaced to administrators
+
+    priority_queue = (MatchCandidate.query.filter_by(status="pending").order_by(MatchCandidate.match_score.desc()).limit(5).all())
+
+    # Audit log data is only shown to administrators
     user_role = current_user.role
     recent_activity = (
         AuditLog.query.order_by(AuditLog.created_at.desc()).limit(5).all()

@@ -1,6 +1,6 @@
 from datetime import datetime
 from flask import Blueprint, render_template, abort, redirect, url_for, flash
-from flask_login import login_required, current_user
+from flask_login import current_user
 from app.auth.decorators import role_required
 from app.extensions import db
 from app.models import AuditLog, GoldenRecord, GoldenRecordLink, MatchCandidate, MergeDecision
@@ -9,10 +9,9 @@ from app.match_queue.explain import build_explanation
 
 match_queue_bp = Blueprint("match_queue", __name__)
 
-#Decorators run bottom up closest to function, swapped order.
+
 
 @match_queue_bp.route("/match-queue", methods=["GET"])
-@login_required # make sure logged in
 @role_required("administrator", "data_steward", "data_analyst")
 def index():
     # lists the pending match candidates by match score descending
@@ -22,10 +21,9 @@ def index():
 
 
 @match_queue_bp.route("/match-candidates/<int:id>", methods=["GET"])
-@login_required
 @role_required("administrator", "data_steward", "data_analyst")
 def detail(id):
-    """Show full details of a single match candidate."""
+    # Show full details of a single match candidate
     candidate = db.session.get(MatchCandidate, id)
     if candidate is None:
         abort(404)
@@ -35,7 +33,6 @@ def detail(id):
 
 
 @match_queue_bp.route("/match-candidates/<int:id>/approve", methods=["POST"])
-@login_required
 @role_required("data_steward")  # only data_steward can approve
 def approve(id): # approve and create golden record
     
@@ -73,8 +70,10 @@ def approve(id): # approve and create golden record
     db.session.flush()  # get golden.id before linking
 
     # Link both source records to the golden record
-    db.session.add(GoldenRecordLink(golden_record_id=golden.id, source_record_id=candidate.record_a_id))
-    db.session.add(GoldenRecordLink(golden_record_id=golden.id, source_record_id=candidate.record_b_id))
+    link_a = GoldenRecordLink(golden_record_id=golden.id, source_record_id=candidate.record_a_id)
+    link_b = GoldenRecordLink(golden_record_id=golden.id, source_record_id=candidate.record_b_id)
+    db.session.add(link_a)
+    db.session.add(link_b)
 
     # Audit log
     db.session.add(AuditLog(
@@ -96,10 +95,9 @@ def approve(id): # approve and create golden record
 
 
 @match_queue_bp.route("/match-candidates/<int:id>/reject", methods=["POST"])
-@login_required
 @role_required("data_steward")  # only data_steward can reject
 def reject(id):
-    """Reject a pending match candidate."""
+    # Reject a pending match candidate
     candidate = db.session.get(MatchCandidate, id)
     if candidate is None:
         abort(404)

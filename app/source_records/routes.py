@@ -1,35 +1,42 @@
 from datetime import datetime
-from flask import Blueprint, render_template, redirect, url_for, flash, abort
-from flask_login import login_required
+from flask import Blueprint, render_template, redirect, url_for, flash, abort, request
+from flask_login import current_user
 from app.auth.decorators import role_required
 from app.extensions import db
-from app.models import SourceRecord, SourceSystem
+from app.models import AuditLog, GoldenRecordLink, MatchCandidate, SourceRecord, SourceSystem
 from app.source_records.forms import SourceRecordForm
 
 source_records_bp = Blueprint("source_records", __name__)
 
 
 def _populate_system_choices(form):
-    """Fill the source_system_id dropdown from the database."""
+    # Fill the source system dropdown - called before every GET and failed POST
     form.source_system_id.choices = [
         (s.id, s.name) for s in SourceSystem.query.order_by(SourceSystem.name).all()
     ]
 
 
 @source_records_bp.route("/source-records", methods=["GET"])
-@login_required
 @role_required("administrator", "data_steward", "data_analyst")
 def index():
-    """List all source records ordered by most recently created."""
-    records = SourceRecord.query.order_by(SourceRecord.created_at.desc()).all()
-    return render_template("source_records/index.html", records=records)
+    status = request.args.get("status", "active")
+    q = SourceRecord.query
+    if status == "archived":
+        q = q.filter_by(is_archived=True)
+    elif status == "all":
+        pass  # no filter
+    else:
+        # default: active only
+        status = "active"
+        q = q.filter_by(is_archived=False)
+    records = q.order_by(SourceRecord.created_at.desc()).all()
+    return render_template("source_records/index.html", records=records, status=status)
 
 
 @source_records_bp.route("/source-records/new", methods=["GET", "POST"])
-@login_required
 @role_required("administrator", "data_steward")
 def create():
-    """Create a new source record."""
+    # Handle new source record form - GET shows blank form, POST validates and saves
     form = SourceRecordForm()
     _populate_system_choices(form)
 
@@ -46,7 +53,7 @@ def create():
         record = SourceRecord(
             source_system_id=form.source_system_id.data,
             external_id=form.external_id.data,
-            first_name=form.first_name.data or None,
+            first_name=form.first_name.data or None,   # store None instead of empty string
             last_name=form.last_name.data or None,
             email=form.email.data or None,
             date_of_birth=form.date_of_birth.data or None,
@@ -63,10 +70,9 @@ def create():
 
 
 @source_records_bp.route("/source-records/<int:id>", methods=["GET"])
-@login_required
 @role_required("administrator", "data_steward", "data_analyst")
 def detail(id):
-    """Read-only detail view for a source record."""
+    # Read-only view - no editing from here
     record = db.session.get(SourceRecord, id)
     if record is None:
         abort(404)
@@ -74,19 +80,22 @@ def detail(id):
 
 
 @source_records_bp.route("/source-records/<int:id>/edit", methods=["GET", "POST"])
-@login_required
 @role_required("administrator", "data_steward")
 def edit(id):
-    """Edit an existing source record."""
+    # Edit an existing source record
     record = db.session.get(SourceRecord, id)
     if record is None:
         abort(404)
+    if record.is_archived:
+        flash("Archived records cannot be edited. Restore the record first.", "warning")
+        return redirect(url_for("source_records.detail", id=id))
 
     form = SourceRecordForm(obj=record)
     _populate_system_choices(form)
 
     if form.validate_on_submit():
         # Duplicate check: same system + external_id, but not this record itself
+        # using .filter() not .filter_by() because we need the != condition
         duplicate = SourceRecord.query.filter(
             SourceRecord.source_system_id == form.source_system_id.data,
             SourceRecord.external_id == form.external_id.data,
@@ -113,10 +122,9 @@ def edit(id):
 
 
 @source_records_bp.route("/source-records/<int:id>/archive", methods=["POST"])
-@login_required
 @role_required("administrator", "data_steward")
 def archive(id):
-    """Archive a source record (soft delete)."""
+    # Soft delete - sets is_archived flag rather than removing the row
     record = db.session.get(SourceRecord, id)
     if record is None:
         abort(404)
@@ -128,4 +136,64 @@ def archive(id):
         db.session.commit()
         flash(f"Source record {record.external_id} archived.", "success")
     return redirect(url_for("source_records.index"))
+
+
+@source_records_bp.route("/source-records/<int:id>/unarchive", methods=["POST"])
+@role_required("administrator")
+def unarchive(id):
+    # Restore a soft-deleted record - administrator only
+    record = db.session.get(SourceRecord, id)
+    if record is None:
+        abort(404)
+    if not record.is_archived:
+        flash("Record is not archived.", "warning")
+    else:
+        record.is_archived = False
+        record.archived_at = None
+        db.session.commit()
+        flash(f"Source record {record.external_id} restored successfully.", "success")
+    return redirect(url_for("source_records.index", status="archived"))
+
+
+@source_records_bp.route("/source-records/<int:id>/delete", methods=["POST"])
+@role_required("administrator")
+def delete(id):
+    # Permanent delete - only allowed for archived, unlinked records
+    record = db.session.get(SourceRecord, id)
+    if record is None:
+        abort(404)
+
+    if not record.is_archived:
+        flash("Only archived records can be permanently deleted.", "danger")
+        return redirect(url_for("source_records.detail", id=id))
+
+    confirmation = request.form.get("confirmation", "").strip()
+    if confirmation != "DELETE":
+        flash("Type DELETE exactly to confirm permanent deletion.", "warning")
+        return redirect(url_for("source_records.detail", id=id))
+
+    # Block if the record is referenced in match or golden record history
+    in_match = MatchCandidate.query.filter(
+        (MatchCandidate.record_a_id == id) | (MatchCandidate.record_b_id == id)
+    ).first()
+    in_golden = GoldenRecordLink.query.filter_by(source_record_id=id).first()
+    if in_match or in_golden:
+        flash(
+            f"Source record {record.external_id} is part of match or golden record history and cannot be deleted.",
+            "danger",
+        )
+        return redirect(url_for("source_records.detail", id=id))
+
+    # Audit before deleting
+    db.session.add(AuditLog(
+        user_id=current_user.id,
+        action="source_record_deleted",
+        target_type="source_record",
+        target_id=record.id,
+        detail=f"Source record {record.external_id} permanently deleted by {current_user.username}",
+    ))
+    db.session.delete(record)
+    db.session.commit()
+    flash(f"Source record {record.external_id} permanently deleted.", "success")
+    return redirect(url_for("source_records.index", status="archived"))
 

@@ -78,9 +78,9 @@
                 <tr>
                   <td class="ps-3 fw-semibold">{{ r.first_name or '' }} {{ r.last_name or '' }}</td>
                   <td class="text-muted">{{ r.external_id }}</td>
-                  <td>{{ r.email or '&mdash;' }}</td>
-                  <td>{{ r.postcode or '&mdash;' }}</td>
-                  <td>{{ r.phone or '&mdash;' }}</td>
+                  <td>{{ r.email or '—' }}</td>
+                  <td>{{ r.postcode or '—' }}</td>
+                  <td>{{ r.phone or '—' }}</td>
                   <td>
                     {% if r.is_archived %}
                       <span class="badge bg-secondary">Archived</span>
@@ -195,9 +195,9 @@
                 {% for g in golden_records %}
                 <tr>
                   <td class="ps-3 fw-semibold">{{ g.first_name or '' }} {{ g.last_name or '' }}</td>
-                  <td>{{ g.email or '&mdash;' }}</td>
-                  <td>{{ g.postcode or '&mdash;' }}</td>
-                  <td>{{ g.phone or '&mdash;' }}</td>
+                  <td>{{ g.email or '—' }}</td>
+                  <td>{{ g.postcode or '—' }}</td>
+                  <td>{{ g.phone or '—' }}</td>
                   <td class="pe-3">
                     <a href="{{ url_for('golden_records.detail', id=g.id) }}" class="btn btn-sm btn-outline-primary">View</a>
                   </td>

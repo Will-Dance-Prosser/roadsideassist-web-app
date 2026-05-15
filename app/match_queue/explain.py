@@ -1,18 +1,15 @@
-"""
-Simple field-level match explanation helpers.
-
-Each function compares a single field from two SourceRecord objects and returns
-a dict with:
-  - field:   human-readable field label
-  - a_val:   display value from Record A
-  - b_val:   display value from Record B
-  - match:   True | False | None (None = not enough data to compare)
-  - note:    short explanation shown in the UI
-"""
+# Field-level match explanation helpers.
+# Each function compares a single field from two SourceRecord objects and returns
+# a dict with:
+#   field  - human-readable field label
+#   a_val  - display value from Record A
+#   b_val  - display value from Record B
+#   match  - True / False / None (None = not enough data to compare)
+#   note   - short explanation shown in the UI
 
 
 def _normalise(value):
-    """Strip whitespace and convert to uppercase for loose comparison."""
+    # Strip whitespace and convert to uppercase for loose comparison
     if value is None:
         return None
     return value.strip().upper().replace(" ", "")
@@ -59,7 +56,8 @@ def explain_postcode(rec_a, rec_b):
 
 
 def explain_phone(rec_a, rec_b):
-    # Normalise: keep digits only
+    # Strip everything except digits before comparing
+    # TODO: could +44 prefix stripping be handled here???
     def digits(v):
         if v is None:
             return None
@@ -105,10 +103,8 @@ def explain_email(rec_a, rec_b):
 
 
 def explain_last_name(rec_a, rec_b):
-    """
-    Simple similarity: exact match after normalisation, then checks whether one
-    name starts with the other (handles abbreviations like 'C.' vs 'Charles').
-    """
+    # Exact match first, then a basic prefix check for abbreviations
+    # e.g. 'J.' should loosely match 'JOHNSON' - not perfect but good enough for now
     a_raw, b_raw = rec_a.last_name, rec_b.last_name
     a, b = _normalise(a_raw), _normalise(b_raw)
     if a is None or b is None:
@@ -148,7 +144,7 @@ def explain_last_name(rec_a, rec_b):
 
 
 def build_explanation(candidate):
-    """Return a list of field explanation dicts for the given MatchCandidate."""
+    # Build the full list of field comparisons for the match detail page
     a, b = candidate.record_a, candidate.record_b
     return [
         explain_email(a, b),

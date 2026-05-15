@@ -31,6 +31,7 @@
               <th scope="col">Active</th>
               <th scope="col">Created</th>
               <th scope="col">Updated</th>
+              <th scope="col"></th>
             </tr>
           </thead>
           <tbody>
@@ -49,6 +50,7 @@
               </td>
               <td class="small text-muted">{{ rule.created_at.strftime('%d %b %Y') }}</td>
               <td class="small text-muted">{{ rule.updated_at.strftime('%d %b %Y') }}</td>
+              <td><a href="{{ url_for('rules.edit', id=rule.id) }}" class="btn btn-xs btn-outline-primary btn-sm py-0 px-2 small">Edit</a></td>
             </tr>
             {% else %}
             <tr>

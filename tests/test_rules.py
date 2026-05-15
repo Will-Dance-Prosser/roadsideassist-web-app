@@ -105,3 +105,92 @@ def test_rules_page_shows_inactive_badge(client, app):
     _create_and_login(client, app, "admin", "admin@example.com", "administrator")
     response = client.get("/rules")
     assert b"Inactive" in response.data
+
+
+# ---------------------------------------------------------------------------
+# Edit rule tests
+# ---------------------------------------------------------------------------
+
+def _seed_rule_and_get_id(app):
+    with app.app_context():
+        rule = MatchRule(field_name="email", match_method="exact", weight=0.35, is_active=True)
+        db.session.add(rule)
+        db.session.commit()
+        return rule.id
+
+
+def _edit_form(field_name="email", match_method="exact", weight="0.40", is_active="y"):
+    data = {"field_name": field_name, "match_method": match_method, "weight": weight}
+    if is_active:
+        data["is_active"] = is_active
+    return data
+
+
+def test_administrator_can_access_rule_edit_page(client, app):
+    rule_id = _seed_rule_and_get_id(app)
+    _create_and_login(client, app, "admin", "admin@example.com", "administrator")
+    response = client.get(f"/rules/{rule_id}/edit")
+    assert response.status_code == 200
+    assert b"Edit Rule" in response.data
+
+
+def test_data_steward_cannot_access_rule_edit(client, app):
+    rule_id = _seed_rule_and_get_id(app)
+    _create_and_login(client, app, "steward", "steward@example.com", "data_steward")
+    response = client.get(f"/rules/{rule_id}/edit")
+    assert response.status_code == 403
+
+
+def test_data_analyst_cannot_access_rule_edit(client, app):
+    rule_id = _seed_rule_and_get_id(app)
+    _create_and_login(client, app, "analyst", "analyst@example.com", "data_analyst")
+    response = client.get(f"/rules/{rule_id}/edit")
+    assert response.status_code == 403
+
+
+def test_administrator_can_update_rule_weight(client, app):
+    rule_id = _seed_rule_and_get_id(app)
+    _create_and_login(client, app, "admin", "admin@example.com", "administrator")
+    response = client.post(f"/rules/{rule_id}/edit", data=_edit_form(weight="0.75"), follow_redirects=True)
+    assert response.status_code == 200
+    with app.app_context():
+        rule = db.session.get(MatchRule, rule_id)
+        assert abs(rule.weight - 0.75) < 0.001
+
+
+def test_administrator_can_deactivate_rule(client, app):
+    rule_id = _seed_rule_and_get_id(app)
+    _create_and_login(client, app, "admin", "admin@example.com", "administrator")
+    # omit is_active to leave it unchecked
+    response = client.post(f"/rules/{rule_id}/edit", data=_edit_form(is_active=None), follow_redirects=True)
+    assert response.status_code == 200
+    with app.app_context():
+        rule = db.session.get(MatchRule, rule_id)
+        assert rule.is_active is False
+
+
+def test_invalid_weight_is_rejected(client, app):
+    rule_id = _seed_rule_and_get_id(app)
+    _create_and_login(client, app, "admin", "admin@example.com", "administrator")
+    response = client.post(f"/rules/{rule_id}/edit", data=_edit_form(weight="1.5"))
+    assert response.status_code == 200
+    assert b"Weight must be between" in response.data
+    with app.app_context():
+        rule = db.session.get(MatchRule, rule_id)
+        assert abs(rule.weight - 0.35) < 0.001  # unchanged
+
+
+def test_duplicate_field_method_combination_is_rejected(client, app):
+    with app.app_context():
+        r1 = MatchRule(field_name="email", match_method="exact", weight=0.35, is_active=True)
+        r2 = MatchRule(field_name="last_name", match_method="fuzzy", weight=0.20, is_active=True)
+        db.session.add_all([r1, r2])
+        db.session.commit()
+        r2_id = r2.id
+
+    _create_and_login(client, app, "admin", "admin@example.com", "administrator")
+    # Try to change r2 to the same field+method as r1
+    response = client.post(f"/rules/{r2_id}/edit", data=_edit_form(field_name="email", match_method="exact", weight="0.20"))
+    assert response.status_code == 200
+    assert b"already uses" in response.data
+

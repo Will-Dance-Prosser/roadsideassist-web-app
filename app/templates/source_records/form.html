@@ -86,7 +86,7 @@
 
           <div class="col-12">
             <label class="form-label small fw-medium" for="raw_data">Raw Data (JSON)</label>
-            {{ form.raw_data(class="form-control form-control-sm font-monospace" + (" is-invalid" if form.raw_data.errors else ""), id="raw_data", rows=3, placeholder='{"key": "value"}') }}
+            {{ form.raw_data(class="form-control form-control-sm font-monospace" + (" is-invalid" if form.raw_data.errors else ""), id="raw_data", rows=3, placeholder='{"source": "crm", "import_id": "12345"}  — optional') }}
             {% for error in form.raw_data.errors %}
               <div class="invalid-feedback">{{ error }}</div>
             {% endfor %}

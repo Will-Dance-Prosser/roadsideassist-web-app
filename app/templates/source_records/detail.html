@@ -10,9 +10,9 @@
     </button>
     <div>
       <h1 class="h4 mb-0 fw-semibold">{{ record.first_name or '' }} {{ record.last_name or '' }}</h1>
-      <p class="text-muted small mt-1 mb-0">Source Record &mdash; {{ record.external_id }}</p>
+      <p class="text-muted small mt-1 mb-0">{{ record.external_id }} &mdash; {{ record.source_system.name }}</p>
     </div>
-    {% if current_user.role in ('administrator', 'data_steward') %}
+    {% if current_user.role in ('administrator', 'data_steward') and not record.is_archived %}
     <div class="ms-auto">
       <a href="{{ url_for('source_records.edit', id=record.id) }}" class="btn btn-sm btn-primary">
         <i class="bi bi-pencil me-1" aria-hidden="true"></i> Edit
@@ -73,5 +73,52 @@
       </dl>
     </div>
   </div>
+
+  {% if record.is_archived and current_user.role == 'administrator' %}
+
+  <!-- Restore -->
+  <div class="card border-0 shadow-sm mt-3">
+    <div class="card-header bg-white border-bottom">
+      <span class="fw-semibold">Restore Record</span>
+    </div>
+    <div class="card-body p-4 d-flex align-items-center gap-3">
+      <p class="small text-muted mb-0">Restoring this record will make it active again and allow editing.</p>
+      <form method="post" action="{{ url_for('source_records.unarchive', id=record.id) }}" class="ms-auto">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-sm btn-outline-success">
+          <i class="bi bi-arrow-counterclockwise me-1"></i>Restore
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Permanent delete -->
+  <div class="card border-danger border-0 shadow-sm mt-3">
+    <div class="card-header bg-danger-subtle border-bottom border-danger-subtle d-flex align-items-center gap-2">
+      <i class="bi bi-exclamation-triangle-fill text-danger"></i>
+      <span class="fw-semibold text-danger">Permanent Deletion</span>
+    </div>
+    <div class="card-body p-4">
+      <p class="small text-muted mb-3">
+        Permanent deletion is only available for archived records that are not part of match or golden record history.
+        This action <strong>cannot be undone</strong>.
+      </p>
+      <form method="post" action="{{ url_for('source_records.delete', id=record.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="mb-3" style="max-width: 320px;">
+          <label class="form-label small fw-medium" for="confirmation">
+            Type <strong>DELETE</strong> to confirm
+          </label>
+          <input type="text" name="confirmation" id="confirmation"
+                 class="form-control form-control-sm" placeholder="DELETE" autocomplete="off">
+        </div>
+        <button type="submit" class="btn btn-sm btn-danger">
+          <i class="bi bi-trash me-1"></i>Permanently Delete
+        </button>
+      </form>
+    </div>
+  </div>
+
+  {% endif %}
 
 {% endblock %}
