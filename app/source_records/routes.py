@@ -76,7 +76,27 @@ def detail(id):
     record = db.session.get(SourceRecord, id)
     if record is None:
         abort(404)
-    return render_template("source_records/detail.html", record=record)
+
+    # Pre-calculate delete eligibility so the template can show a clear blocked/safe state
+    match_links = []
+    golden_links = []
+    if record.is_archived and current_user.role == "administrator":
+        match_links = MatchCandidate.query.filter(
+            (MatchCandidate.record_a_id == id) | (MatchCandidate.record_b_id == id)
+        ).all()
+        golden_links = GoldenRecordLink.query.filter_by(source_record_id=id).all()
+
+    can_delete = record.is_archived and len(match_links) == 0 and len(golden_links) == 0
+
+    return render_template(
+        "source_records/detail.html",
+        record=record,
+        match_link_count=len(match_links),
+        golden_link_count=len(golden_links),
+        match_links=match_links,
+        golden_links=golden_links,
+        can_delete=can_delete,
+    )
 
 
 @source_records_bp.route("/source-records/<int:id>/edit", methods=["GET", "POST"])

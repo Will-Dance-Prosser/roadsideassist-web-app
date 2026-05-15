@@ -93,29 +93,69 @@
   </div>
 
   <!-- Permanent delete -->
-  <div class="card border-danger border-0 shadow-sm mt-3">
-    <div class="card-header bg-danger-subtle border-bottom border-danger-subtle d-flex align-items-center gap-2">
-      <i class="bi bi-exclamation-triangle-fill text-danger"></i>
-      <span class="fw-semibold text-danger">Permanent Deletion</span>
+  <div class="card border-0 shadow-sm mt-3">
+    <div class="card-header border-bottom d-flex align-items-center gap-2
+         {{ 'bg-danger-subtle border-danger-subtle' if can_delete else 'bg-white' }}">
+      {% if can_delete %}
+        <i class="bi bi-exclamation-triangle-fill text-danger"></i>
+        <span class="fw-semibold text-danger">Permanent Deletion</span>
+      {% else %}
+        <i class="bi bi-shield-lock text-secondary"></i>
+        <span class="fw-semibold text-secondary">Lineage Protected</span>
+      {% endif %}
     </div>
     <div class="card-body p-4">
-      <p class="small text-muted mb-3">
-        Permanent deletion is only available for archived records that are not part of match or golden record history.
-        This action <strong>cannot be undone</strong>.
-      </p>
-      <form method="post" action="{{ url_for('source_records.delete', id=record.id) }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div class="mb-3" style="max-width: 320px;">
-          <label class="form-label small fw-medium" for="confirmation">
-            Type <strong>DELETE</strong> to confirm
-          </label>
-          <input type="text" name="confirmation" id="confirmation"
-                 class="form-control form-control-sm" placeholder="DELETE" autocomplete="off">
+      {% if can_delete %}
+        <p class="small text-muted mb-3">
+          This record has no match or golden record links.
+          Permanent deletion <strong>cannot be undone</strong>.
+        </p>
+        <form method="post" action="{{ url_for('source_records.delete', id=record.id) }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="mb-3" style="max-width: 320px;">
+            <label class="form-label small fw-medium" for="confirmation">
+              Type <strong>DELETE</strong> to confirm
+            </label>
+            <input type="text" name="confirmation" id="confirmation"
+                   class="form-control form-control-sm" placeholder="DELETE" autocomplete="off">
+          </div>
+          <button type="submit" class="btn btn-sm btn-danger">
+            <i class="bi bi-trash me-1"></i>Permanently Delete
+          </button>
+        </form>
+      {% else %}
+        <p class="small text-muted mb-3">
+          This record is linked to match or golden record history and cannot be permanently deleted.
+          Restore it or resolve the links first.
+        </p>
+        <div class="mb-2">
+          <p class="small fw-medium mb-1"><i class="bi bi-link-45deg me-1"></i>Match candidate links ({{ match_link_count }}):</p>
+          {% if match_links %}
+            <ul class="list-unstyled small ms-3 mb-0">
+              {% for mc in match_links %}
+              <li><a href="{{ url_for('match_queue.detail', id=mc.id) }}" class="text-decoration-none">MC-{{ '%04d' % mc.id }}</a></li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <span class="small text-muted ms-3">None</span>
+          {% endif %}
         </div>
-        <button type="submit" class="btn btn-sm btn-danger">
-          <i class="bi bi-trash me-1"></i>Permanently Delete
+        <div class="mb-3">
+          <p class="small fw-medium mb-1"><i class="bi bi-link-45deg me-1"></i>Golden record links ({{ golden_link_count }}):</p>
+          {% if golden_links %}
+            <ul class="list-unstyled small ms-3 mb-0">
+              {% for gl in golden_links %}
+              <li><a href="{{ url_for('golden_records.detail', id=gl.golden_record_id) }}" class="text-decoration-none">GR-{{ '%04d' % gl.golden_record_id }}</a></li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <span class="small text-muted ms-3">None</span>
+          {% endif %}
+        </div>
+        <button class="btn btn-sm btn-secondary" disabled>
+          <i class="bi bi-trash me-1"></i>Delete permanently
         </button>
-      </form>
+      {% endif %}
     </div>
   </div>
 

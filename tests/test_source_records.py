@@ -533,3 +533,67 @@ def test_data_analyst_cannot_delete(client, app):
                            data={"confirmation": "DELETE"})
     assert response.status_code == 403
 
+
+# ---------------------------------------------------------------------------
+# Delete eligibility display tests
+# ---------------------------------------------------------------------------
+
+def test_detail_shows_delete_form_for_clean_archived_record(client, app):
+    record_id = _seed_clean_archived_record(app)
+    _login_as(client, app, "administrator")
+    response = client.get(f"/source-records/{record_id}")
+    assert response.status_code == 200
+    # delete form should be present
+    assert b"Permanently Delete" in response.data
+    assert b'name="confirmation"' in response.data
+
+
+def test_detail_shows_blocked_state_for_linked_archived_record(client, app):
+    with app.app_context():
+        system = SourceSystem(name="BlockCRM")
+        db.session.add(system)
+        db.session.flush()
+        r1 = SourceRecord(source_system_id=system.id, external_id="BLK-A", first_name="X", last_name="X",
+                          is_archived=True, archived_at=datetime.utcnow())
+        r2 = SourceRecord(source_system_id=system.id, external_id="BLK-B", first_name="Y", last_name="Y")
+        db.session.add_all([r1, r2])
+        db.session.flush()
+        mc = MatchCandidate(record_a_id=r1.id, record_b_id=r2.id, match_score=0.8)
+        db.session.add(mc)
+        db.session.commit()
+        r1_id = r1.id
+        mc_id = mc.id
+
+    _login_as(client, app, "administrator")
+    response = client.get(f"/source-records/{r1_id}")
+    assert response.status_code == 200
+    assert b"Lineage Protected" in response.data
+    assert b"cannot be permanently deleted" in response.data
+    # MC ID shown in MC-0001 format
+    assert f"MC-{mc_id:04d}".encode() in response.data
+    # links to match candidate detail page
+    assert f"/match-candidates/{mc_id}".encode() in response.data
+
+
+def test_detail_blocked_state_shows_golden_record_id(client, app):
+    with app.app_context():
+        system = SourceSystem(name="GoldBlockCRM")
+        db.session.add(system)
+        db.session.flush()
+        record = SourceRecord(source_system_id=system.id, external_id="GB-A", first_name="G", last_name="G",
+                              is_archived=True, archived_at=datetime.utcnow())
+        db.session.add(record)
+        db.session.flush()
+        golden = GoldenRecord(first_name="G", last_name="G")
+        db.session.add(golden)
+        db.session.flush()
+        db.session.add(GoldenRecordLink(golden_record_id=golden.id, source_record_id=record.id))
+        db.session.commit()
+        record_id = record.id
+        golden_id = golden.id
+
+    _login_as(client, app, "administrator")
+    response = client.get(f"/source-records/{record_id}")
+    assert f"GR-{golden_id:04d}".encode() in response.data
+    assert f"/golden-records/{golden_id}".encode() in response.data
+
