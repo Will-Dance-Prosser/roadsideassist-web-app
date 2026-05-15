@@ -236,3 +236,126 @@ def test_delete_controls_hidden_from_non_admin(client, app):
     _login_as(client, app, "data_steward")
     response = client.get(f"/golden-records/{golden_id}")
     assert b"Permanent Deletion" not in response.data
+
+
+# ---------------------------------------------------------------------------
+# Reopen approved match candidates after golden record delete
+# ---------------------------------------------------------------------------
+
+def _seed_golden_with_candidate(app, candidate_status="approved"):
+    """Seed a golden record with two linked source records and a match candidate."""
+    with app.app_context():
+        system = SourceSystem(name="ReopenCRM")
+        db.session.add(system)
+        db.session.flush()
+        rec_a = SourceRecord(source_system_id=system.id, external_id="RO-001", first_name="A", last_name="A")
+        rec_b = SourceRecord(source_system_id=system.id, external_id="RO-002", first_name="B", last_name="B")
+        db.session.add_all([rec_a, rec_b])
+        db.session.flush()
+        candidate = MatchCandidate(
+            record_a_id=rec_a.id, record_b_id=rec_b.id,
+            match_score=0.95, status=candidate_status,
+        )
+        db.session.add(candidate)
+        db.session.flush()
+        golden = GoldenRecord(first_name="A", last_name="A")
+        db.session.add(golden)
+        db.session.flush()
+        db.session.add(GoldenRecordLink(golden_record_id=golden.id, source_record_id=rec_a.id))
+        db.session.add(GoldenRecordLink(golden_record_id=golden.id, source_record_id=rec_b.id))
+        db.session.commit()
+        return golden.id, candidate.id
+
+
+def test_approved_candidate_set_to_pending_after_golden_delete(client, app):
+    golden_id, candidate_id = _seed_golden_with_candidate(app, candidate_status="approved")
+    _login_as(client, app, "administrator")
+    client.post(f"/golden-records/{golden_id}/delete", data={"confirmation": "DELETE"})
+    with app.app_context():
+        c = db.session.get(MatchCandidate, candidate_id)
+        assert c.status == "pending"
+
+
+def test_reviewed_at_and_reviewed_by_cleared_on_reopen(client, app):
+    from datetime import datetime
+    with app.app_context():
+        system = SourceSystem(name="ClearCRM")
+        db.session.add(system)
+        db.session.flush()
+        rec_a = SourceRecord(source_system_id=system.id, external_id="CL-001", first_name="C", last_name="C")
+        rec_b = SourceRecord(source_system_id=system.id, external_id="CL-002", first_name="D", last_name="D")
+        db.session.add_all([rec_a, rec_b])
+        db.session.flush()
+        candidate = MatchCandidate(
+            record_a_id=rec_a.id, record_b_id=rec_b.id,
+            match_score=0.9, status="approved",
+            reviewed_at=datetime(2025, 1, 1), reviewed_by_id=1,
+        )
+        db.session.add(candidate)
+        db.session.flush()
+        golden = GoldenRecord(first_name="C", last_name="C")
+        db.session.add(golden)
+        db.session.flush()
+        db.session.add(GoldenRecordLink(golden_record_id=golden.id, source_record_id=rec_a.id))
+        db.session.add(GoldenRecordLink(golden_record_id=golden.id, source_record_id=rec_b.id))
+        db.session.commit()
+        golden_id = golden.id
+        candidate_id = candidate.id
+
+    _login_as(client, app, "administrator")
+    client.post(f"/golden-records/{golden_id}/delete", data={"confirmation": "DELETE"})
+    with app.app_context():
+        c = db.session.get(MatchCandidate, candidate_id)
+        assert c.reviewed_at is None
+        assert c.reviewed_by_id is None
+
+
+def test_rejected_candidate_not_reopened(client, app):
+    golden_id, candidate_id = _seed_golden_with_candidate(app, candidate_status="rejected")
+    _login_as(client, app, "administrator")
+    client.post(f"/golden-records/{golden_id}/delete", data={"confirmation": "DELETE"})
+    with app.app_context():
+        c = db.session.get(MatchCandidate, candidate_id)
+        assert c.status == "rejected"
+
+
+def test_unrelated_approved_candidate_not_reopened(client, app):
+    golden_id, _ = _seed_golden_with_candidate(app, candidate_status="approved")
+    # Create a completely unrelated approved candidate
+    with app.app_context():
+        system = SourceSystem(name="UnrelatedCRM")
+        db.session.add(system)
+        db.session.flush()
+        r1 = SourceRecord(source_system_id=system.id, external_id="UR-001", first_name="X", last_name="X")
+        r2 = SourceRecord(source_system_id=system.id, external_id="UR-002", first_name="Y", last_name="Y")
+        db.session.add_all([r1, r2])
+        db.session.flush()
+        unrelated = MatchCandidate(record_a_id=r1.id, record_b_id=r2.id, match_score=0.8, status="approved")
+        db.session.add(unrelated)
+        db.session.commit()
+        unrelated_id = unrelated.id
+
+    _login_as(client, app, "administrator")
+    client.post(f"/golden-records/{golden_id}/delete", data={"confirmation": "DELETE"})
+    with app.app_context():
+        c = db.session.get(MatchCandidate, unrelated_id)
+        assert c.status == "approved"
+
+
+def test_audit_log_mentions_reopened_candidate(client, app):
+    golden_id, candidate_id = _seed_golden_with_candidate(app, candidate_status="approved")
+    _login_as(client, app, "administrator")
+    client.post(f"/golden-records/{golden_id}/delete", data={"confirmation": "DELETE"})
+    with app.app_context():
+        entry = AuditLog.query.filter_by(action="golden_record_deleted").first()
+        assert entry is not None
+        assert f"MC-{candidate_id:04d}" in entry.detail
+
+
+def test_source_records_retained_after_candidate_reopen(client, app):
+    golden_id, _ = _seed_golden_with_candidate(app, candidate_status="approved")
+    _login_as(client, app, "administrator")
+    client.post(f"/golden-records/{golden_id}/delete", data={"confirmation": "DELETE"})
+    with app.app_context():
+        # The two source records linked to the golden record must still exist
+        assert SourceRecord.query.filter(SourceRecord.external_id.in_(["RO-001", "RO-002"])).count() == 2
