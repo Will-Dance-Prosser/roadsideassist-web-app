@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block title %}Reports | MemberMatch{% endblock %}
+
+{% block content %}
+
+  <div class="mb-4 d-flex align-items-center gap-3">
+    <a href="{{ url_for('dashboard.index') }}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-arrow-left" aria-hidden="true"></i> Dashboard
+    </a>
+    <div>
+      <h1 class="h4 mb-0 fw-semibold">Reports</h1>
+      <p class="text-muted small mt-1 mb-0">Read-only summary of the current MDM workflow state</p>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+
+    {# Match Outcomes #}
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-white border-bottom fw-semibold">
+          <i class="bi bi-intersect me-1 text-muted" aria-hidden="true"></i> Match Outcomes
+        </div>
+        <div class="card-body p-0">
+          <table class="table table-hover align-middle mb-0 small">
+            <tbody>
+              <tr>
+                <td class="ps-3 text-muted">Pending review</td>
+                <td class="fw-semibold text-warning">{{ match_outcomes.pending }}</td>
+              </tr>
+              <tr>
+                <td class="ps-3 text-muted">Approved</td>
+                <td class="fw-semibold text-success">{{ match_outcomes.approved }}</td>
+              </tr>
+              <tr>
+                <td class="ps-3 text-muted">Rejected</td>
+                <td class="fw-semibold text-danger">{{ match_outcomes.rejected }}</td>
+              </tr>
+              <tr class="table-light">
+                <td class="ps-3 fw-medium">Total candidates</td>
+                <td class="fw-bold">{{ match_outcomes.pending + match_outcomes.approved + match_outcomes.rejected }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    {# Data Quality #}
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-white border-bottom fw-semibold">
+          <i class="bi bi-database me-1 text-muted" aria-hidden="true"></i> Data Quality
+        </div>
+        <div class="card-body p-0">
+          <table class="table table-hover align-middle mb-0 small">
+            <tbody>
+              <tr>
+                <td class="ps-3 text-muted">Active source records</td>
+                <td class="fw-semibold">{{ data_quality.active_records }}</td>
+              </tr>
+              <tr>
+                <td class="ps-3 text-muted">Archived source records</td>
+                <td class="fw-semibold text-secondary">{{ data_quality.archived_records }}</td>
+              </tr>
+              <tr>
+                <td class="ps-3 text-muted">Golden records</td>
+                <td class="fw-semibold text-warning">{{ data_quality.golden_records }}</td>
+              </tr>
+              <tr>
+                <td class="ps-3 text-muted">Connected source systems</td>
+                <td class="fw-semibold">{{ data_quality.source_systems }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  {# Stewardship Activity #}
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-bottom fw-semibold">
+      <i class="bi bi-person-check me-1 text-muted" aria-hidden="true"></i> Stewardship Activity
+      <span class="text-muted fw-normal small ms-2">latest approve / reject decisions</span>
+    </div>
+    <div class="card-body p-0">
+      {% if stewardship %}
+      <table class="table table-hover align-middle mb-0 small">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-3">Action</th>
+            <th>Detail</th>
+            <th>User</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for entry in stewardship %}
+          <tr>
+            <td class="ps-3">
+              {% if entry.action == 'match_approved' %}
+                <span class="badge bg-success">Approved</span>
+              {% else %}
+                <span class="badge bg-danger">Rejected</span>
+              {% endif %}
+            </td>
+            <td class="text-muted">{{ entry.detail or '—' }}</td>
+            <td>{{ entry.user.username if entry.user else 'System' }}</td>
+            <td class="text-muted">{{ entry.created_at.strftime('%d %b %Y %H:%M') }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="text-muted small py-3 px-3 mb-0">No approve or reject decisions have been recorded yet.</p>
+      {% endif %}
+    </div>
+  </div>
+
+{% endblock %}
