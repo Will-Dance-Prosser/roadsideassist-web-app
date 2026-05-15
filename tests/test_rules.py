@@ -194,3 +194,50 @@ def test_duplicate_field_method_combination_is_rejected(client, app):
     assert response.status_code == 200
     assert b"already uses" in response.data
 
+
+# ---------------------------------------------------------------------------
+# Audit log tests
+# ---------------------------------------------------------------------------
+
+def test_match_rule_update_creates_audit_log(client, app):
+    rule_id = _seed_rule_and_get_id(app)
+    _create_and_login(client, app, "admin", "admin@example.com", "administrator")
+    client.post(f"/rules/{rule_id}/edit", data=_edit_form(weight="0.30"), follow_redirects=True)
+    with app.app_context():
+        from app.models import AuditLog
+        entry = AuditLog.query.filter_by(action="match_rule_updated", target_id=rule_id).first()
+        assert entry is not None
+        assert "match_rule" == entry.target_type
+
+
+def test_match_rule_audit_detail_includes_changed_field(client, app):
+    rule_id = _seed_rule_and_get_id(app)
+    _create_and_login(client, app, "admin", "admin@example.com", "administrator")
+    client.post(f"/rules/{rule_id}/edit", data=_edit_form(weight="0.30"), follow_redirects=True)
+    with app.app_context():
+        from app.models import AuditLog
+        entry = AuditLog.query.filter_by(action="match_rule_updated").first()
+        assert "weight" in entry.detail
+        assert "0.30" in entry.detail or "0.3" in entry.detail
+
+
+def test_match_rule_deactivation_creates_audit_log(client, app):
+    rule_id = _seed_rule_and_get_id(app)
+    _create_and_login(client, app, "admin", "admin@example.com", "administrator")
+    client.post(f"/rules/{rule_id}/edit", data=_edit_form(is_active=None), follow_redirects=True)
+    with app.app_context():
+        from app.models import AuditLog
+        entry = AuditLog.query.filter_by(action="match_rule_updated").first()
+        assert entry is not None
+        assert "active" in entry.detail
+
+
+def test_match_rule_audit_mentions_score_recalculation(client, app):
+    rule_id = _seed_rule_and_get_id(app)
+    _create_and_login(client, app, "admin", "admin@example.com", "administrator")
+    client.post(f"/rules/{rule_id}/edit", data=_edit_form(weight="0.28"), follow_redirects=True)
+    with app.app_context():
+        from app.models import AuditLog
+        entry = AuditLog.query.filter_by(action="match_rule_updated").first()
+        assert "recalculated" in entry.detail.lower()
+

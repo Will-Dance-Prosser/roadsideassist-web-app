@@ -655,3 +655,121 @@ def test_invalid_source_system_id_shows_all_records(client, app):
     assert response.status_code == 200
     assert b"F-CRM-001" in response.data
     assert b"F-WEB-001" in response.data
+
+
+# ---------------------------------------------------------------------------
+# Audit log tests
+# ---------------------------------------------------------------------------
+
+def _login_steward(client, app):
+    _login(client, app, role="data_steward")
+
+
+def _login_admin(client, app):
+    _login(client, app, role="administrator")
+
+
+def test_source_record_create_creates_audit_log(client, app):
+    with app.app_context():
+        system = SourceSystem(name="AuditCRM")
+        db.session.add(system)
+        db.session.commit()
+        system_id = system.id
+
+    _login_steward(client, app)
+    from app.models import AuditLog
+    client.post("/source-records/new", data={
+        "source_system_id": system_id,
+        "external_id": "AUD-001",
+        "first_name": "Test",
+        "last_name": "User",
+    }, follow_redirects=True)
+    with app.app_context():
+        entry = AuditLog.query.filter_by(action="source_record_created").first()
+        assert entry is not None
+        assert entry.target_type == "source_record"
+        assert "AUD-001" in entry.detail
+
+
+def test_source_record_update_creates_audit_log(client, app):
+    _seed_record(app)
+    _login_steward(client, app)
+    from app.models import AuditLog
+    with app.app_context():
+        record = SourceRecord.query.filter_by(external_id="CRM-001").first()
+        record_id = record.id
+        system_id = record.source_system_id
+
+    client.post(f"/source-records/{record_id}/edit", data={
+        "source_system_id": system_id,
+        "external_id": "CRM-001",
+        "first_name": "Jonathan",
+        "last_name": "Smith",
+        "email": "john.smith@example.com",
+        "postcode": "SW1A 1AA",
+        "phone": "07700900001",
+    }, follow_redirects=True)
+    with app.app_context():
+        entry = AuditLog.query.filter_by(action="source_record_updated").first()
+        assert entry is not None
+        assert entry.target_type == "source_record"
+
+
+def test_source_record_archive_creates_audit_log(client, app):
+    _seed_record(app)
+    _login_steward(client, app)
+    from app.models import AuditLog
+    with app.app_context():
+        record = SourceRecord.query.filter_by(external_id="CRM-001").first()
+        record_id = record.id
+
+    client.post(f"/source-records/{record_id}/archive", follow_redirects=True)
+    with app.app_context():
+        entry = AuditLog.query.filter_by(action="source_record_archived").first()
+        assert entry is not None
+        assert entry.target_id == record_id
+
+
+def test_source_record_restore_creates_audit_log(client, app):
+    with app.app_context():
+        system = SourceSystem(name="RestoreCRM")
+        db.session.add(system)
+        db.session.flush()
+        record = SourceRecord(
+            source_system_id=system.id, external_id="RST-001",
+            first_name="R", last_name="R", is_archived=True,
+        )
+        db.session.add(record)
+        db.session.commit()
+        record_id = record.id
+
+    _login_admin(client, app)
+    from app.models import AuditLog
+    client.post(f"/source-records/{record_id}/unarchive", follow_redirects=True)
+    with app.app_context():
+        entry = AuditLog.query.filter_by(action="source_record_restored").first()
+        assert entry is not None
+        assert entry.target_id == record_id
+
+
+def test_source_record_permanent_delete_creates_audit_log(client, app):
+    with app.app_context():
+        system = SourceSystem(name="DelCRM")
+        db.session.add(system)
+        db.session.flush()
+        record = SourceRecord(
+            source_system_id=system.id, external_id="DEL-001",
+            first_name="D", last_name="D", is_archived=True,
+        )
+        db.session.add(record)
+        db.session.commit()
+        record_id = record.id
+
+    _login_admin(client, app)
+    from app.models import AuditLog
+    client.post(f"/source-records/{record_id}/delete",
+                data={"confirmation": "DELETE"}, follow_redirects=True)
+    with app.app_context():
+        entry = AuditLog.query.filter_by(action="source_record_deleted").first()
+        assert entry is not None
+        assert "DEL-001" in entry.detail

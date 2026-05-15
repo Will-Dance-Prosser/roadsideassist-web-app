@@ -80,6 +80,14 @@ def create():
         )
         db.session.add(record)
         db.session.commit()
+        db.session.add(AuditLog(
+            user_id=current_user.id,
+            action="source_record_created",
+            target_type="source_record",
+            target_id=record.id,
+            detail=f"Source record {record.external_id} created in {record.source_system.name} by {current_user.username}",
+        ))
+        db.session.commit()
         flash(f"Source record {record.external_id} created successfully.", "success")
         return redirect(url_for("source_records.index"))
 
@@ -142,6 +150,15 @@ def edit(id):
             flash("Another record with that External ID already exists in this Source System.", "warning")
             return render_template("source_records/form.html", form=form, title="Edit Source Record", record=record)
 
+        # Track which fields changed before committing
+        TRACKED = ("source_system_id", "external_id", "first_name", "last_name",
+                   "email", "date_of_birth", "postcode", "phone")
+        changes = [
+            f"{field}: {getattr(record, field)!r} -> {getattr(form, field).data!r}"
+            for field in TRACKED
+            if str(getattr(record, field) or "") != str(getattr(form, field).data or "")
+        ]
+
         record.source_system_id = form.source_system_id.data
         record.external_id = form.external_id.data
         record.first_name = form.first_name.data or None
@@ -154,6 +171,14 @@ def edit(id):
         db.session.commit()
         from app.services.match_scoring import recalculate_scores_for_source_record
         recalculate_scores_for_source_record(id)
+        change_summary = "; ".join(changes) if changes else "no field changes detected"
+        db.session.add(AuditLog(
+            user_id=current_user.id,
+            action="source_record_updated",
+            target_type="source_record",
+            target_id=record.id,
+            detail=f"Source record {record.external_id} updated by {current_user.username}: {change_summary}",
+        ))
         db.session.commit()
         flash(f"Source record {record.external_id} updated successfully.", "success")
         return redirect(url_for("source_records.index"))
@@ -173,6 +198,13 @@ def archive(id):
     else:
         record.is_archived = True
         record.archived_at = datetime.utcnow()
+        db.session.add(AuditLog(
+            user_id=current_user.id,
+            action="source_record_archived",
+            target_type="source_record",
+            target_id=record.id,
+            detail=f"Source record {record.external_id} archived by {current_user.username}",
+        ))
         db.session.commit()
         flash(f"Source record {record.external_id} archived.", "success")
     return redirect(url_for("source_records.index"))
@@ -190,6 +222,13 @@ def unarchive(id):
     else:
         record.is_archived = False
         record.archived_at = None
+        db.session.add(AuditLog(
+            user_id=current_user.id,
+            action="source_record_restored",
+            target_type="source_record",
+            target_id=record.id,
+            detail=f"Source record {record.external_id} restored by {current_user.username}",
+        ))
         db.session.commit()
         flash(f"Source record {record.external_id} restored successfully.", "success")
     return redirect(url_for("source_records.index", status="archived"))
