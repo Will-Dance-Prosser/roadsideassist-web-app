@@ -41,22 +41,37 @@
   </div>
 
   <div class="card border-0 shadow-sm">
-    <div class="card-header bg-white border-bottom d-flex align-items-center justify-content-between">
-      <div class="btn-group btn-group-sm" role="group" aria-label="Filter records">
-        <a href="{{ url_for('source_records.index', status='active') }}"
-           class="btn btn-outline-secondary {{ 'active' if status == 'active' }}">Active</a>
-        <a href="{{ url_for('source_records.index', status='archived') }}"
-           class="btn btn-outline-secondary {{ 'active' if status == 'archived' }}">Archived</a>
-        <a href="{{ url_for('source_records.index', status='all') }}"
-           class="btn btn-outline-secondary {{ 'active' if status == 'all' }}">All</a>
-      </div>
-      <div class="d-flex align-items-center gap-3">
-        <span class="text-muted small">{{ records|length }} record{{ 's' if records|length != 1 }}</span>
-        {% if current_user.role in ('administrator', 'data_steward') %}
-        <a href="{{ url_for('source_records.create') }}" class="btn btn-sm btn-primary">
-          <i class="bi bi-plus-lg me-1"></i>New Record
-        </a>
-        {% endif %}
+    <div class="card-header bg-white border-bottom">
+      <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+          <!-- Status filter -->
+          <div class="btn-group btn-group-sm" role="group" aria-label="Filter by status">
+            <a href="{{ url_for('source_records.index', status='active',   source_system_id=source_system_id) }}"
+               class="btn btn-outline-secondary {{ 'active' if status == 'active' }}">Active</a>
+            <a href="{{ url_for('source_records.index', status='archived', source_system_id=source_system_id) }}"
+               class="btn btn-outline-secondary {{ 'active' if status == 'archived' }}">Archived</a>
+            <a href="{{ url_for('source_records.index', status='all',      source_system_id=source_system_id) }}"
+               class="btn btn-outline-secondary {{ 'active' if status == 'all' }}">All</a>
+          </div>
+          <!-- Source system filter -->
+          <form method="get" action="{{ url_for('source_records.index') }}" class="d-flex align-items-center gap-1">
+            <input type="hidden" name="status" value="{{ status }}">
+            <select name="source_system_id" class="form-select form-select-sm" onchange="this.form.submit()" aria-label="Filter by source system">
+              <option value="">All source systems</option>
+              {% for system in systems %}
+              <option value="{{ system.id }}" {{ 'selected' if source_system_id == system.id }}>{{ system.name }}</option>
+              {% endfor %}
+            </select>
+          </form>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+          <span class="text-muted small">{{ records|length }} record{{ 's' if records|length != 1 }}</span>
+          {% if current_user.role in ('administrator', 'data_steward') %}
+          <a href="{{ url_for('source_records.create') }}" class="btn btn-sm btn-primary">
+            <i class="bi bi-plus-lg me-1"></i>New Record
+          </a>
+          {% endif %}
+        </div>
       </div>
     </div>
     <div class="card-body p-0">

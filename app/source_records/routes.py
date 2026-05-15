@@ -20,6 +20,8 @@ def _populate_system_choices(form):
 @role_required("administrator", "data_steward", "data_analyst")
 def index():
     status = request.args.get("status", "active")
+    source_system_id = request.args.get("source_system_id", type=int)
+
     q = SourceRecord.query
     if status == "archived":
         q = q.filter_by(is_archived=True)
@@ -29,8 +31,23 @@ def index():
         # default: active only
         status = "active"
         q = q.filter_by(is_archived=False)
+
+    # Source system filter — silently ignore invalid/missing values
+    systems = SourceSystem.query.order_by(SourceSystem.name).all()
+    valid_ids = {s.id for s in systems}
+    if source_system_id not in valid_ids:
+        source_system_id = None
+    if source_system_id:
+        q = q.filter_by(source_system_id=source_system_id)
+
     records = q.order_by(SourceRecord.created_at.desc()).all()
-    return render_template("source_records/index.html", records=records, status=status)
+    return render_template(
+        "source_records/index.html",
+        records=records,
+        status=status,
+        systems=systems,
+        source_system_id=source_system_id,
+    )
 
 
 @source_records_bp.route("/source-records/new", methods=["GET", "POST"])

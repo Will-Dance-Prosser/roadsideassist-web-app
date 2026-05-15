@@ -338,3 +338,41 @@ def test_approve_buttons_hidden_for_already_reviewed_candidate(client, app):
     assert response.status_code == 200
     assert b"Approve Match" not in response.data
     assert b"Reject Match" not in response.data
+
+
+# ---------------------------------------------------------------------------
+# Source record navigation links on candidate detail page
+# ---------------------------------------------------------------------------
+
+def test_candidate_detail_shows_view_source_record_links(client, app):
+    # All roles should see a View source record link for each record card
+    candidate_id = _seed_candidate(app)
+    _login(client, app, role="data_analyst")
+    response = client.get(f"/match-candidates/{candidate_id}")
+    assert response.status_code == 200
+    assert b"View source record" in response.data
+
+
+def test_candidate_detail_source_record_link_points_to_detail_route(client, app):
+    candidate_id = _seed_candidate(app)
+    _login(client, app)
+    response = client.get(f"/match-candidates/{candidate_id}")
+    assert b"/source-records/" in response.data
+
+
+def test_data_analyst_not_shown_edit_link_on_candidate_detail(client, app):
+    candidate_id = _seed_candidate(app)
+    _login(client, app, role="data_analyst")
+    response = client.get(f"/match-candidates/{candidate_id}")
+    assert response.status_code == 200
+    assert b"View source record" in response.data
+    assert b"Edit" not in response.data
+
+
+def test_data_steward_sees_edit_link_on_candidate_detail(client, app):
+    candidate_id = _seed_candidate(app)
+    _login(client, app, role="data_steward")
+    response = client.get(f"/match-candidates/{candidate_id}")
+    assert response.status_code == 200
+    assert b"View source record" in response.data
+    assert b"Edit" in response.data

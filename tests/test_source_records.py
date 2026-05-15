@@ -597,3 +597,61 @@ def test_detail_blocked_state_shows_golden_record_id(client, app):
     assert f"GR-{golden_id:04d}".encode() in response.data
     assert f"/golden-records/{golden_id}".encode() in response.data
 
+
+# ---------------------------------------------------------------------------
+# Source system filter tests
+# ---------------------------------------------------------------------------
+
+def _seed_two_systems(app):
+    """Seed two source systems with one record each, return (system_a_id, system_b_id)."""
+    with app.app_context():
+        sys_a = SourceSystem(name="FilterCRM")
+        sys_b = SourceSystem(name="FilterWeb")
+        db.session.add_all([sys_a, sys_b])
+        db.session.flush()
+        db.session.add(SourceRecord(source_system_id=sys_a.id, external_id="F-CRM-001", first_name="Alice", last_name="A"))
+        db.session.add(SourceRecord(source_system_id=sys_b.id, external_id="F-WEB-001", first_name="Bob",   last_name="B"))
+        db.session.commit()
+        return sys_a.id, sys_b.id
+
+
+def test_source_records_default_view_no_filter(client, app):
+    _seed_two_systems(app)
+    _login(client, app)
+    response = client.get("/source-records")
+    assert response.status_code == 200
+    assert b"F-CRM-001" in response.data
+    assert b"F-WEB-001" in response.data
+
+
+def test_source_records_filter_by_source_system(client, app):
+    sys_a_id, sys_b_id = _seed_two_systems(app)
+    _login(client, app)
+    response = client.get(f"/source-records?source_system_id={sys_a_id}")
+    assert response.status_code == 200
+    assert b"F-CRM-001" in response.data
+    assert b"F-WEB-001" not in response.data
+
+
+def test_source_system_filter_combined_with_status_archived(client, app):
+    sys_a_id, _ = _seed_two_systems(app)
+    # Archive the CRM record
+    with app.app_context():
+        record = SourceRecord.query.filter_by(external_id="F-CRM-001").first()
+        record.is_archived = True
+        db.session.commit()
+    _login(client, app)
+    response = client.get(f"/source-records?status=archived&source_system_id={sys_a_id}")
+    assert response.status_code == 200
+    assert b"F-CRM-001" in response.data
+    assert b"F-WEB-001" not in response.data
+
+
+def test_invalid_source_system_id_shows_all_records(client, app):
+    _seed_two_systems(app)
+    _login(client, app)
+    # 99999 is not a real system id — should silently fall back to all systems
+    response = client.get("/source-records?source_system_id=99999")
+    assert response.status_code == 200
+    assert b"F-CRM-001" in response.data
+    assert b"F-WEB-001" in response.data
