@@ -3,6 +3,7 @@ from app.auth.decorators import role_required
 from app.extensions import db
 from app.models import MatchRule
 from app.rules.forms import MatchRuleForm
+from app.services.match_scoring import recalculate_all_candidate_scores
 
 rules_bp = Blueprint("rules", __name__, template_folder="../templates")
 
@@ -39,6 +40,8 @@ def edit(id):
         rule.match_method = form.match_method.data
         rule.weight = form.weight.data
         rule.is_active = form.is_active.data
+        db.session.commit()
+        recalculate_all_candidate_scores()
         db.session.commit()
         flash(f"Rule '{rule.field_name} ({rule.match_method})' updated successfully.", "success")
         return redirect(url_for("rules.index"))

@@ -5,7 +5,12 @@
 #   a_val  - display value from Record A
 #   b_val  - display value from Record B
 #   match  - True / False / None (None = not enough data to compare)
+#   result - display label: "Match", "Similar", "Mismatch", or "Unknown"
 #   note   - short explanation shown in the UI
+
+from difflib import SequenceMatcher
+
+FUZZY_THRESHOLD = 0.8  # must match app/services/match_scoring.py
 
 
 def _normalise(value):
@@ -23,6 +28,7 @@ def explain_date_of_birth(rec_a, rec_b):
             "a_val": str(a) if a else "—",
             "b_val": str(b) if b else "—",
             "match": None,
+            "result": "Unknown",
             "note": "Cannot compare — one or both dates are missing.",
         }
     matched = a == b
@@ -31,6 +37,7 @@ def explain_date_of_birth(rec_a, rec_b):
         "a_val": a.strftime("%d %b %Y"),
         "b_val": b.strftime("%d %b %Y"),
         "match": matched,
+        "result": "Match" if matched else "Mismatch",
         "note": "Exact date of birth match." if matched else "Dates of birth differ.",
     }
 
@@ -43,6 +50,7 @@ def explain_postcode(rec_a, rec_b):
             "a_val": rec_a.postcode or "—",
             "b_val": rec_b.postcode or "—",
             "match": None,
+            "result": "Unknown",
             "note": "Cannot compare — one or both postcodes are missing.",
         }
     matched = a == b
@@ -51,6 +59,7 @@ def explain_postcode(rec_a, rec_b):
         "a_val": rec_a.postcode,
         "b_val": rec_b.postcode,
         "match": matched,
+        "result": "Match" if matched else "Mismatch",
         "note": "Postcodes match (after normalisation)." if matched else "Postcodes differ.",
     }
 
@@ -70,6 +79,7 @@ def explain_phone(rec_a, rec_b):
             "a_val": rec_a.phone or "—",
             "b_val": rec_b.phone or "—",
             "match": None,
+            "result": "Unknown",
             "note": "Cannot compare — one or both phone numbers are missing.",
         }
     matched = a == b
@@ -78,6 +88,7 @@ def explain_phone(rec_a, rec_b):
         "a_val": rec_a.phone,
         "b_val": rec_b.phone,
         "match": matched,
+        "result": "Match" if matched else "Mismatch",
         "note": "Phone numbers match (digits only)." if matched else "Phone numbers differ.",
     }
 
@@ -90,6 +101,7 @@ def explain_email(rec_a, rec_b):
             "a_val": rec_a.email or "—",
             "b_val": rec_b.email or "—",
             "match": None,
+            "result": "Unknown",
             "note": "Cannot compare — one or both emails are missing.",
         }
     matched = a == b
@@ -98,13 +110,14 @@ def explain_email(rec_a, rec_b):
         "a_val": rec_a.email,
         "b_val": rec_b.email,
         "match": matched,
+        "result": "Match" if matched else "Mismatch",
         "note": "Email addresses match." if matched else "Email addresses differ.",
     }
 
 
 def explain_last_name(rec_a, rec_b):
-    # Exact match first, then a basic prefix check for abbreviations
-    # e.g. 'J.' should loosely match 'JOHNSON' - not perfect but good enough for now
+    # Fuzzy comparison using SequenceMatcher (ratio >= FUZZY_THRESHOLD).
+    # Matches "Ahmed" vs "Ahmad", "Smith" vs "Smyth", etc.
     a_raw, b_raw = rec_a.last_name, rec_b.last_name
     a, b = _normalise(a_raw), _normalise(b_raw)
     if a is None or b is None:
@@ -113,33 +126,34 @@ def explain_last_name(rec_a, rec_b):
             "a_val": a_raw or "—",
             "b_val": b_raw or "—",
             "match": None,
+            "result": "Unknown",
             "note": "Cannot compare — one or both last names are missing.",
         }
-    if a == b:
+    ratio = SequenceMatcher(None, a.lower(), b.lower()).ratio()
+    passed = ratio >= FUZZY_THRESHOLD
+    if passed and a == b:
+        # Exact match that also satisfies the fuzzy rule — show as a plain Match
         return {
             "field": "Last Name",
             "a_val": a_raw,
             "b_val": b_raw,
             "match": True,
+            "result": "Match",
             "note": "Last names match exactly.",
         }
-    # Partial: strip punctuation for prefix check so "J." matches "JOHNSON"
-    a_alpha = "".join(ch for ch in a if ch.isalpha())
-    b_alpha = "".join(ch for ch in b if ch.isalpha())
-    if a_alpha and b_alpha and (b_alpha.startswith(a_alpha) or a_alpha.startswith(b_alpha)):
-        return {
-            "field": "Last Name",
-            "a_val": a_raw,
-            "b_val": b_raw,
-            "match": True,
-            "note": "Last names appear similar (one may be an abbreviation).",
-        }
+    pct = f"{ratio:.0%}"
+    threshold_pct = f"{FUZZY_THRESHOLD:.0%}"
+    if passed:
+        note = f"Fuzzy rule passed. Similarity {pct}, threshold {threshold_pct}."
+    else:
+        note = f"Fuzzy rule failed. Similarity {pct}, threshold {threshold_pct}."
     return {
         "field": "Last Name",
         "a_val": a_raw,
         "b_val": b_raw,
-        "match": False,
-        "note": "Last names differ.",
+        "match": passed,
+        "result": "Similar" if passed else "Mismatch",
+        "note": note,
     }
 
 

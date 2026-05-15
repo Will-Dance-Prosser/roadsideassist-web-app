@@ -53,6 +53,7 @@ def test_explain_dob_exact_match():
     b = _Rec(date_of_birth=date(1980, 4, 12))
     result = explain_date_of_birth(a, b)
     assert result["match"] is True
+    assert result["result"] == "Match"
     assert "match" in result["note"].lower()
 
 
@@ -61,6 +62,7 @@ def test_explain_dob_mismatch():
     b = _Rec(date_of_birth=date(1990, 1, 1))
     result = explain_date_of_birth(a, b)
     assert result["match"] is False
+    assert result["result"] == "Mismatch"
 
 
 def test_explain_dob_missing():
@@ -75,6 +77,7 @@ def test_explain_postcode_match_after_normalisation():
     b = _Rec(postcode="sw1a1aa")  # different case/spacing
     result = explain_postcode(a, b)
     assert result["match"] is True
+    assert result["result"] == "Match"
     assert "normalisation" in result["note"].lower()
 
 
@@ -101,6 +104,7 @@ def test_explain_phone_match_digits_only():
     b2 = _Rec(phone="07700900001")
     result = explain_phone(a2, b2)
     assert result["match"] is True
+    assert result["result"] == "Match"
 
 
 def test_explain_phone_mismatch():
@@ -129,6 +133,7 @@ def test_explain_email_mismatch():
     b = _Rec(email="other@email.com")
     result = explain_email(a, b)
     assert result["match"] is False
+    assert result["result"] == "Mismatch"
     assert "differ" in result["note"].lower()
 
 
@@ -144,14 +149,27 @@ def test_explain_last_name_exact():
     b = _Rec(last_name="smith")
     result = explain_last_name(a, b)
     assert result["match"] is True
+    assert result["result"] == "Match"
 
 
 def test_explain_last_name_abbreviation():
+    # "J." vs "Johnson" is no longer treated as a match under fuzzy SequenceMatcher
+    # (similarity ~0.29, below the 0.80 threshold). This is intentional — the old
+    # prefix-check was replaced with difflib fuzzy matching to align with scoring.
     a = _Rec(last_name="J.")
     b = _Rec(last_name="Johnson")
     result = explain_last_name(a, b)
+    assert result["match"] is False
+
+
+def test_explain_last_name_close_fuzzy_match():
+    # Near-duplicate surnames that differ by a character should return 'Similar'
+    a = _Rec(last_name="Ahmed")
+    b = _Rec(last_name="Ahmad")
+    result = explain_last_name(a, b)
     assert result["match"] is True
-    assert "abbreviation" in result["note"].lower()
+    assert result["result"] == "Similar"
+    assert "fuzzy rule passed" in result["note"].lower()
 
 
 def test_explain_last_name_mismatch():
@@ -159,6 +177,8 @@ def test_explain_last_name_mismatch():
     b = _Rec(last_name="Jones")
     result = explain_last_name(a, b)
     assert result["match"] is False
+    assert result["result"] == "Mismatch"
+    assert "fuzzy rule failed" in result["note"].lower()
 
 
 # ---------------------------------------------------------------------------
@@ -173,20 +193,20 @@ def _seed_candidate(app):
 
         rec_a = SourceRecord(
             source_system_id=system.id, external_id="CRM-001",
-            first_name="John", last_name="Smith", email="j.smith@email.com",
-            phone="07700900001", postcode="SW1A 1AA", date_of_birth=date(1980, 4, 12),
+            first_name="Sara", last_name="Ahmed", email="s.ahmed@email.com",
+            phone="07700900001", postcode="E1 6AN", date_of_birth=date(1988, 7, 15),
         )
         rec_b = SourceRecord(
-            source_system_id=system.id, external_id="WEB-001",
-            first_name="J.", last_name="Smith", email="j.smith@email.com",
-            phone="07700900001", postcode="SW1A 1AA", date_of_birth=date(1980, 4, 12),
+            source_system_id=system.id, external_id="LEG-001",
+            first_name="Sara", last_name="Ahmad", email="s.ahmed@email.com",
+            phone="07700900001", postcode="E1 6AN", date_of_birth=date(1988, 7, 15),
         )
         db.session.add_all([rec_a, rec_b])
         db.session.flush()
 
         candidate = MatchCandidate(
             record_a_id=rec_a.id, record_b_id=rec_b.id,
-            match_score=0.98, status="pending",
+            match_score=0.88, status="pending",
         )
         db.session.add(candidate)
         db.session.commit()
@@ -209,3 +229,5 @@ def test_detail_page_renders_match_explanation_section(client, app):
     assert b"Postcode" in response.data
     assert b"Phone" in response.data
     assert b"Last Name" in response.data
+    # Ahmed vs Ahmad passes fuzzy threshold — badge should read Similar, not Match
+    assert b"Similar" in response.data

@@ -135,6 +135,9 @@ def edit(id):
         record.phone = form.phone.data or None
         record.raw_data = form.raw_data.data or None
         db.session.commit()
+        from app.services.match_scoring import recalculate_scores_for_source_record
+        recalculate_scores_for_source_record(id)
+        db.session.commit()
         flash(f"Source record {record.external_id} updated successfully.", "success")
         return redirect(url_for("source_records.index"))
 

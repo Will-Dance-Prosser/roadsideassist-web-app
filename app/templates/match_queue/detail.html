@@ -119,10 +119,12 @@
             <td class="small">{{ row.a_val }}</td>
             <td class="small">{{ row.b_val }}</td>
             <td class="small">
-              {% if row.match is none %}
+              {% if row.result == 'Unknown' %}
                 <span class="badge bg-light text-secondary border">Unknown</span>
-              {% elif row.match %}
+              {% elif row.result == 'Match' %}
                 <span class="badge bg-success-subtle text-success border border-success-subtle">Match</span>
+              {% elif row.result == 'Similar' %}
+                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">Similar</span>
               {% else %}
                 <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Mismatch</span>
               {% endif %}

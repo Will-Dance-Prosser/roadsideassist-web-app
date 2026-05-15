@@ -4,6 +4,7 @@ import click
 from flask.cli import with_appcontext
 from app.extensions import db
 from app.models import AuditLog, GoldenRecord, GoldenRecordLink, MatchCandidate, MatchRule, MergeDecision, SourceRecord, SourceSystem, User
+from app.services.match_scoring import calculate_match_score
 
 
 DEMO_USERS = [
@@ -130,41 +131,7 @@ def seed_demo_mdm_data():
 
     db.session.commit()
 
-
-
-    # Match Candidates - each tuple is (ext_id_a, ext_id_b, score, status)
-    # comments explain why each pair was chosen
-    demo_candidates = [
-        ("CRM-001", "WEB-001", 0.98, "approved"),   # same person, exact email+phone+dob match
-        ("CRM-002", "WEB-002", 0.91, "approved"),   # same person, exact email match
-        ("CRM-003", "LEG-001", 0.88, "pending"),    # likely same — different email format
-        ("CRM-004", "LEG-002", 0.76, "pending"),    # possible match — surname spelled differently
-        ("WEB-003", "VEH-002", 0.95, "approved"),   # same person across two systems
-        ("CRM-001", "VEH-001", 0.94, "rejected"),   # false positive — same name, confirmed different
-    ]
-
-    for ext_a, ext_b, score, status in demo_candidates:
-        rec_a = records.get(ext_a)
-        rec_b = records.get(ext_b)
-        if rec_a and rec_b:
-            existing = MatchCandidate.query.filter_by(
-                record_a_id=rec_a.id, record_b_id=rec_b.id
-            ).first()
-            if existing:
-                click.echo(f"  candidate exists:  {ext_a} ↔ {ext_b}")
-            else:
-                candidate = MatchCandidate(
-                    record_a_id=rec_a.id,
-                    record_b_id=rec_b.id,
-                    match_score=score,
-                    status=status,
-                )
-                db.session.add(candidate)
-                click.echo(f"  candidate created: {ext_a} ↔ {ext_b} ({status}, score={score})")
-
-    db.session.commit()
-
-    # Match Rules
+    # Match Rules — seeded BEFORE candidates so calculate_match_score can use them
     for data in DEMO_MATCH_RULES:
         existing = MatchRule.query.filter_by(field_name=data["field_name"]).first()
         if existing:
@@ -181,6 +148,43 @@ def seed_demo_mdm_data():
     db.session.commit()
 
 
+
+    # Match Candidates - each tuple is (ext_id_a, ext_id_b, historical_score, status)
+    # Approved/rejected candidates keep their historical scores for auditability.
+    # Pending candidates have their scores calculated from active rules.
+    demo_candidates = [
+        ("CRM-001", "WEB-001", 0.98, "approved"),   # same person, exact email+phone+dob match
+        ("CRM-002", "WEB-002", 0.91, "approved"),   # same person, exact email match
+        ("CRM-003", "LEG-001", None, "pending"),    # likely same — different email format
+        ("CRM-004", "LEG-002", None, "pending"),    # possible match — surname spelled differently
+        ("WEB-003", "VEH-002", 0.95, "approved"),   # same person across two systems
+        ("CRM-001", "VEH-001", 0.94, "rejected"),   # false positive — same name, confirmed different
+    ]
+
+    for ext_a, ext_b, historical_score, status in demo_candidates:
+        rec_a = records.get(ext_a)
+        rec_b = records.get(ext_b)
+        if rec_a and rec_b:
+            existing = MatchCandidate.query.filter_by(
+                record_a_id=rec_a.id, record_b_id=rec_b.id
+            ).first()
+            if existing:
+                click.echo(f"  candidate exists:  {ext_a} ↔ {ext_b}")
+            else:
+                if status == "pending":
+                    score = calculate_match_score(rec_a, rec_b)
+                else:
+                    score = historical_score  # preserve historical scores for approved/rejected
+                candidate = MatchCandidate(
+                    record_a_id=rec_a.id,
+                    record_b_id=rec_b.id,
+                    match_score=score,
+                    status=status,
+                )
+                db.session.add(candidate)
+                click.echo(f"  candidate created: {ext_a} ↔ {ext_b} ({status}, score={score})")
+
+    db.session.commit()
 
     # Drop a single audit log entry so there's something to show in the UI
     existing_log = AuditLog.query.filter_by(action="demo_seed").first()
