@@ -707,7 +707,7 @@ def test_source_record_update_creates_audit_log(client, app):
         "last_name": "Smith",
         "email": "john.smith@example.com",
         "postcode": "SW1A 1AA",
-        "phone": "07700900001",
+        "phone": "07400123456",
     }, follow_redirects=True)
     with app.app_context():
         entry = AuditLog.query.filter_by(action="source_record_updated").first()
@@ -773,3 +773,262 @@ def test_source_record_permanent_delete_creates_audit_log(client, app):
         entry = AuditLog.query.filter_by(action="source_record_deleted").first()
         assert entry is not None
         assert "DEL-001" in entry.detail
+
+
+# ---------------------------------------------------------------------------
+# Form validation tests
+# ---------------------------------------------------------------------------
+
+def test_first_name_with_symbols_is_rejected(client, app):
+    system_id = _seed_system(app)
+    _login_as(client, app, "data_steward")
+    data = _form_data(system_id)
+    data["first_name"] = "J0hn<script>"
+    response = client.post("/source-records/new", data=data)
+    assert response.status_code == 200
+    with app.app_context():
+        assert SourceRecord.query.count() == 0
+
+
+def test_last_name_with_brackets_is_rejected(client, app):
+    system_id = _seed_system(app)
+    _login_as(client, app, "data_steward")
+    data = _form_data(system_id)
+    data["last_name"] = "Smith[Jr]"
+    response = client.post("/source-records/new", data=data)
+    assert response.status_code == 200
+    with app.app_context():
+        assert SourceRecord.query.count() == 0
+
+
+def test_first_name_with_numbers_is_rejected(client, app):
+    system_id = _seed_system(app)
+    _login_as(client, app, "data_steward")
+    data = _form_data(system_id)
+    data["first_name"] = "J4ne"
+    response = client.post("/source-records/new", data=data)
+    assert response.status_code == 200
+    with app.app_context():
+        assert SourceRecord.query.count() == 0
+
+
+def test_external_id_with_spaces_is_rejected(client, app):
+    system_id = _seed_system(app)
+    _login_as(client, app, "data_steward")
+    data = _form_data(system_id, external_id="ID 001")
+    response = client.post("/source-records/new", data=data)
+    assert response.status_code == 200
+    with app.app_context():
+        assert SourceRecord.query.count() == 0
+
+
+def test_external_id_with_special_chars_is_rejected(client, app):
+    system_id = _seed_system(app)
+    _login_as(client, app, "data_steward")
+    data = _form_data(system_id, external_id="ID@001!")
+    response = client.post("/source-records/new", data=data)
+    assert response.status_code == 200
+    with app.app_context():
+        assert SourceRecord.query.count() == 0
+
+
+def test_phone_with_letters_is_rejected(client, app):
+    system_id = _seed_system(app)
+    _login_as(client, app, "data_steward")
+    data = _form_data(system_id)
+    data["phone"] = "not-a-phone"
+    response = client.post("/source-records/new", data=data)
+    assert response.status_code == 200
+    with app.app_context():
+        assert SourceRecord.query.count() == 0
+
+
+def test_postcode_with_symbols_is_rejected(client, app):
+    system_id = _seed_system(app)
+    _login_as(client, app, "data_steward")
+    data = _form_data(system_id)
+    data["postcode"] = "NOT-VALID"
+    response = client.post("/source-records/new", data=data)
+    assert response.status_code == 200
+    with app.app_context():
+        assert SourceRecord.query.count() == 0
+
+
+def test_dob_in_future_is_rejected(client, app):
+    system_id = _seed_system(app)
+    _login_as(client, app, "data_steward")
+    data = _form_data(system_id)
+    data["date_of_birth"] = "2099-01-01"
+    response = client.post("/source-records/new", data=data)
+    assert response.status_code == 200
+    with app.app_context():
+        assert SourceRecord.query.count() == 0
+
+
+def test_invalid_json_raw_data_is_rejected(client, app):
+    system_id = _seed_system(app)
+    _login_as(client, app, "data_steward")
+    data = _form_data(system_id)
+    data["raw_data"] = "{not valid json"
+    response = client.post("/source-records/new", data=data)
+    assert response.status_code == 200
+    with app.app_context():
+        assert SourceRecord.query.count() == 0
+
+
+def test_hyphenated_name_is_accepted(client, app):
+    system_id = _seed_system(app)
+    _login_as(client, app, "data_steward")
+    data = _form_data(system_id)
+    data["first_name"] = "Mary-Jane"
+    data["last_name"] = "O'Brien"
+    response = client.post("/source-records/new", data=data, follow_redirects=True)
+    assert response.status_code == 200
+    with app.app_context():
+        record = SourceRecord.query.first()
+        assert record is not None
+        assert record.first_name == "Mary-Jane"
+        assert record.last_name == "O'Brien"
+
+
+def test_name_with_full_stop_is_accepted(client, app):
+    system_id = _seed_system(app)
+    _login_as(client, app, "data_steward")
+    data = _form_data(system_id)
+    data["first_name"] = "St. Claire"
+    response = client.post("/source-records/new", data=data, follow_redirects=True)
+    assert response.status_code == 200
+    with app.app_context():
+        assert SourceRecord.query.count() == 1
+
+
+def test_valid_uk_phone_format_is_accepted(client, app):
+    # National format should be accepted and normalised to E.164
+    system_id = _seed_system(app)
+    _login_as(client, app, "data_steward")
+    data = _form_data(system_id)
+    data["phone"] = "07400 123456"
+    response = client.post("/source-records/new", data=data, follow_redirects=True)
+    assert response.status_code == 200
+    with app.app_context():
+        record = SourceRecord.query.first()
+        assert record is not None
+        assert record.phone == "+447400123456"  # normalised to E.164
+
+
+def test_international_phone_format_is_accepted(client, app):
+    # Explicit country code should also parse and normalise fine
+    system_id = _seed_system(app)
+    _login_as(client, app, "data_steward")
+    data = _form_data(system_id)
+    data["phone"] = "+44 7400 123456"
+    response = client.post("/source-records/new", data=data, follow_redirects=True)
+    assert response.status_code == 200
+    with app.app_context():
+        record = SourceRecord.query.first()
+        assert record is not None
+        assert record.phone == "+447400123456"
+
+
+def test_invalid_phone_number_is_rejected(client, app):
+    # A string of digits that doesn't form a real number
+    system_id = _seed_system(app)
+    _login_as(client, app, "data_steward")
+    data = _form_data(system_id)
+    data["phone"] = "000 000 0000"
+    response = client.post("/source-records/new", data=data)
+    assert response.status_code == 200
+    with app.app_context():
+        assert SourceRecord.query.count() == 0
+
+
+def test_valid_uk_postcode_is_accepted(client, app):
+    system_id = _seed_system(app)
+    _login_as(client, app, "data_steward")
+    data = _form_data(system_id)
+    data["postcode"] = "SW1A 1AA"
+    response = client.post("/source-records/new", data=data, follow_redirects=True)
+    assert response.status_code == 200
+    with app.app_context():
+        assert SourceRecord.query.count() == 1
+
+
+def test_postcode_without_space_is_accepted(client, app):
+    # Space between outward and inward codes is optional
+    system_id = _seed_system(app)
+    _login_as(client, app, "data_steward")
+    data = _form_data(system_id)
+    data["postcode"] = "SW1A1AA"
+    response = client.post("/source-records/new", data=data, follow_redirects=True)
+    assert response.status_code == 200
+    with app.app_context():
+        assert SourceRecord.query.count() == 1
+
+
+def test_random_string_postcode_is_rejected(client, app):
+    system_id = _seed_system(app)
+    _login_as(client, app, "data_steward")
+    data = _form_data(system_id)
+    data["postcode"] = "HELLO"
+    response = client.post("/source-records/new", data=data)
+    assert response.status_code == 200
+    with app.app_context():
+        assert SourceRecord.query.count() == 0
+
+
+def test_email_missing_tld_is_rejected(client, app):
+    system_id = _seed_system(app)
+    _login_as(client, app, "data_steward")
+    data = _form_data(system_id)
+    data["email"] = "user@example"
+    response = client.post("/source-records/new", data=data)
+    assert response.status_code == 200
+    with app.app_context():
+        assert SourceRecord.query.count() == 0
+
+
+def test_email_missing_at_is_rejected(client, app):
+    system_id = _seed_system(app)
+    _login_as(client, app, "data_steward")
+    data = _form_data(system_id)
+    data["email"] = "notanemail.com"
+    response = client.post("/source-records/new", data=data)
+    assert response.status_code == 200
+    with app.app_context():
+        assert SourceRecord.query.count() == 0
+
+
+def test_valid_email_is_accepted(client, app):
+    system_id = _seed_system(app)
+    _login_as(client, app, "data_steward")
+    data = _form_data(system_id)
+    data["email"] = "jane.doe+tag@example.co.uk"
+    response = client.post("/source-records/new", data=data, follow_redirects=True)
+    assert response.status_code == 200
+    with app.app_context():
+        record = SourceRecord.query.first()
+        assert record is not None
+        assert record.email == "jane.doe+tag@example.co.uk"
+
+
+def test_valid_json_raw_data_is_accepted(client, app):
+    system_id = _seed_system(app)
+    _login_as(client, app, "data_steward")
+    data = _form_data(system_id)
+    data["raw_data"] = '{"source": "api", "ref": 42}'
+    response = client.post("/source-records/new", data=data, follow_redirects=True)
+    assert response.status_code == 200
+    with app.app_context():
+        assert SourceRecord.query.count() == 1
+
+
+def test_external_id_with_hyphen_and_underscore_is_accepted(client, app):
+    system_id = _seed_system(app)
+    _login_as(client, app, "data_steward")
+    data = _form_data(system_id, external_id="REC_001-A")
+    response = client.post("/source-records/new", data=data, follow_redirects=True)
+    assert response.status_code == 200
+    with app.app_context():
+        record = SourceRecord.query.first()
+        assert record is not None
+        assert record.external_id == "REC_001-A"
