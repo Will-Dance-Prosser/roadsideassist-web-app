@@ -1,1 +1,1 @@
-web: flask db upgrade && flask seed-demo-users && flask seed-demo-mdm && gunicorn wsgi:app
+web: bash start.sh
