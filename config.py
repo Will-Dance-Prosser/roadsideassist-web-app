@@ -5,10 +5,11 @@ class Config:
 
     SECRET_KEY = os.environ.get("SECRET_KEY", "dev-only-change-me")
 
-    SQLALCHEMY_DATABASE_URI = os.environ.get(
-        "DATABASE_URL",
-        "sqlite:///membermatch-dev.db",
-    )
+    # Railway injects DATABASE_URL as postgres:// but SQLAlchemy requires postgresql://
+    _db_url = os.environ.get("DATABASE_URL", "sqlite:///membermatch-dev.db")
+    if _db_url.startswith("postgres://"):
+        _db_url = _db_url.replace("postgres://", "postgresql://", 1)
+    SQLALCHEMY_DATABASE_URI = _db_url
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
