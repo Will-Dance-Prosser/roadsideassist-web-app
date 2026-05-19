@@ -6,8 +6,8 @@ app = create_app()
 
 with app.app_context():
     upgrade()
-    from app.commands import seed_demo_users, seed_demo_mdm
+    from app.commands import seed_demo_users, seed_demo_mdm_data
     from click.testing import CliRunner
     runner = CliRunner()
     runner.invoke(seed_demo_users)
-    runner.invoke(seed_demo_mdm)
+    runner.invoke(seed_demo_mdm_data)
