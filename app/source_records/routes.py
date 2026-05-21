@@ -80,6 +80,8 @@ def create():
         )
         db.session.add(record)
         db.session.commit()
+        from app.services.match_scoring import generate_candidates_for_source_record
+        generate_candidates_for_source_record(record, triggered_by="source_record_created")
         db.session.add(AuditLog(
             user_id=current_user.id,
             action="source_record_created",
@@ -169,8 +171,8 @@ def edit(id):
         record.phone = form.phone.data or None
         record.raw_data = form.raw_data.data or None
         db.session.commit()
-        from app.services.match_scoring import recalculate_scores_for_source_record
-        recalculate_scores_for_source_record(id)
+        from app.services.match_scoring import generate_candidates_for_source_record
+        generate_candidates_for_source_record(record, triggered_by="source_record_edited")
         change_summary = "; ".join(changes) if changes else "no field changes detected"
         db.session.add(AuditLog(
             user_id=current_user.id,

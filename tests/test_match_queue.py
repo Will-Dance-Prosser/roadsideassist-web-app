@@ -376,3 +376,60 @@ def test_data_steward_sees_edit_link_on_candidate_detail(client, app):
     assert response.status_code == 200
     assert b"View source record" in response.data
     assert b"Edit" in response.data
+
+
+# ---------------------------------------------------------------------------
+# Related candidates tests
+# ---------------------------------------------------------------------------
+
+def _seed_related_candidates(app):
+    """Seed two candidates that share Record A, plus one unrelated candidate."""
+    with app.app_context():
+        system = SourceSystem(name="Related-CRM")
+        db.session.add(system)
+        db.session.commit()
+
+        rec_a = SourceRecord(source_system_id=system.id, external_id="R-001", first_name="Alice", last_name="Smith")
+        rec_b = SourceRecord(source_system_id=system.id, external_id="R-002", first_name="Alice", last_name="Smyth")
+        rec_c = SourceRecord(source_system_id=system.id, external_id="R-003", first_name="Alice", last_name="Smithe")
+        rec_d = SourceRecord(source_system_id=system.id, external_id="R-004", first_name="Bob",   last_name="Jones")
+        rec_e = SourceRecord(source_system_id=system.id, external_id="R-005", first_name="Bob",   last_name="Jonez")
+        db.session.add_all([rec_a, rec_b, rec_c, rec_d, rec_e])
+        db.session.commit()
+
+        # main candidate (A+B) and a related one (A+C), plus unrelated (D+E)
+        main = MatchCandidate(record_a_id=rec_a.id, record_b_id=rec_b.id, match_score=0.90, status="pending")
+        related = MatchCandidate(record_a_id=rec_a.id, record_b_id=rec_c.id, match_score=0.75, status="pending")
+        unrelated = MatchCandidate(record_a_id=rec_d.id, record_b_id=rec_e.id, match_score=0.80, status="pending")
+        db.session.add_all([main, related, unrelated])
+        db.session.commit()
+        return main.id, related.id
+
+
+def test_related_candidates_shown_on_detail_page(client, app):
+    main_id, related_id = _seed_related_candidates(app)
+    _login(client, app)
+    response = client.get(f"/match-candidates/{main_id}")
+    assert response.status_code == 200
+    assert b"Related Candidates" in response.data
+    # The related candidate's ID should appear
+    assert f"MC-{related_id:04d}".encode() in response.data
+
+
+def test_related_candidates_does_not_show_current_candidate(client, app):
+    main_id, related_id = _seed_related_candidates(app)
+    _login(client, app)
+    response = client.get(f"/match-candidates/{main_id}")
+    assert response.status_code == 200
+    # The related candidate should have a View link
+    assert f"/match-candidates/{related_id}".encode() in response.data
+    # The related table should not contain a View link back to the current candidate
+    assert f"match-candidates/{main_id}\" class=\"btn".encode() not in response.data
+
+
+def test_no_related_candidates_shows_empty_state(client, app):
+    candidate_id = _seed_candidate(app)  # isolated candidate with no shared records
+    _login(client, app)
+    response = client.get(f"/match-candidates/{candidate_id}")
+    assert response.status_code == 200
+    assert b"No related candidates found" in response.data

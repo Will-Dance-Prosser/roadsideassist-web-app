@@ -28,7 +28,17 @@ def detail(id):
     if candidate is None:
         abort(404)
     explanation = build_explanation(candidate)
-    return render_template("match_queue/detail.html", candidate=candidate, explanation=explanation)
+
+    # Other candidates that share either source record — helps spot clusters
+    related = MatchCandidate.query.filter(
+        MatchCandidate.id != id,
+        (MatchCandidate.record_a_id == candidate.record_a_id)
+        | (MatchCandidate.record_b_id == candidate.record_a_id)
+        | (MatchCandidate.record_a_id == candidate.record_b_id)
+        | (MatchCandidate.record_b_id == candidate.record_b_id),
+    ).order_by(MatchCandidate.match_score.desc()).all()
+
+    return render_template("match_queue/detail.html", candidate=candidate, explanation=explanation, related=related)
 
 
 
