@@ -1,5 +1,5 @@
 from datetime import datetime
-from flask import Blueprint, render_template, abort, redirect, url_for, flash
+from flask import Blueprint, render_template, abort, redirect, url_for, flash, request
 from flask_login import current_user
 from app.auth.decorators import role_required
 from app.extensions import db
@@ -44,9 +44,7 @@ def detail(id):
 
 @match_queue_bp.route("/match-candidates/<int:id>/approve", methods=["POST"])
 @role_required("data_steward")  # only data_steward can approve
-def approve(id): # approve and create golden record
-    
-    #prechecks
+def approve(id):
     candidate = db.session.get(MatchCandidate, id)
     if candidate is None:
         abort(404)
@@ -55,10 +53,18 @@ def approve(id): # approve and create golden record
         flash("This candidate has already been reviewed and cannot be changed.", "warning")
         return redirect(url_for("match_queue.detail", id=id))
 
-    now = datetime.utcnow() # get current time for audit/history
+    # Steward picks which record is the primary (base) for the golden record
+    primary = request.form.get("primary_record", "a")
+    if primary == "b":
+        base, other = candidate.record_b, candidate.record_a
+    else:
+        base, other = candidate.record_a, candidate.record_b
 
+    # Fields defined on GoldenRecord — fill from base, fall back to other where base is missing
+    MERGE_FIELDS = ("first_name", "last_name", "email", "date_of_birth", "postcode", "phone")
 
-    # Create merge decision
+    now = datetime.utcnow()
+
     decision = MergeDecision(
         candidate_id=candidate.id,
         decided_by_id=current_user.id,
@@ -66,41 +72,32 @@ def approve(id): # approve and create golden record
     )
     db.session.add(decision)
 
-    # Create golden record from record_a as the base
-    rec_a = candidate.record_a
-    golden = GoldenRecord(
-        first_name=rec_a.first_name,
-        last_name=rec_a.last_name,
-        email=rec_a.email,
-        date_of_birth=rec_a.date_of_birth,
-        postcode=rec_a.postcode,
-        phone=rec_a.phone,
-    )
+    golden = GoldenRecord(**{
+        field: getattr(base, field) or getattr(other, field)
+        for field in MERGE_FIELDS
+    })
     db.session.add(golden)
-    db.session.flush()  # get golden.id before linking
+    db.session.flush()
 
-    # Link both source records to the golden record
     link_a = GoldenRecordLink(golden_record_id=golden.id, source_record_id=candidate.record_a_id)
     link_b = GoldenRecordLink(golden_record_id=golden.id, source_record_id=candidate.record_b_id)
     db.session.add(link_a)
     db.session.add(link_b)
 
-    # Audit log
     db.session.add(AuditLog(
         user_id=current_user.id,
         action="match_approved",
         target_type="match_candidate",
         target_id=candidate.id,
-        detail=f"Candidate MC-{candidate.id:04d} approved by {current_user.username}",
+        detail=f"Candidate MC-{candidate.id:04d} approved by {current_user.username} — primary record: {base.external_id}",
     ))
 
-    # Update candidate last - ensure no updates without auditing
     candidate.status = "approved"
     candidate.reviewed_at = now
     candidate.reviewed_by_id = current_user.id
 
     db.session.commit()
-    flash(f"Match candidate MC-{candidate.id:04d} approved. Golden record created.", "success")
+    flash(f"Match candidate MC-{candidate.id:04d} approved. Golden record created from {base.external_id}.", "success")
     return redirect(url_for("match_queue.detail", id=id))
 
 

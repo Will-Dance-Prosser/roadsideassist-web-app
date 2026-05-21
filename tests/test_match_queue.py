@@ -187,15 +187,20 @@ def _seed_pending_candidate(app):
         return candidate.id
 
 
-def _post(client, url):
+def _post(client, url, data=None):
     """Send a POST with CSRF bypassed (test client uses WTF_CSRF_ENABLED=False)."""
-    return client.post(url, follow_redirects=True)
+    return client.post(url, data=data or {}, follow_redirects=True)
+
+
+def _approve(client, candidate_id, primary="a"):
+    """Approve a candidate with a primary record selection."""
+    return _post(client, f"/match-candidates/{candidate_id}/approve", data={"primary_record": primary})
 
 
 def test_data_steward_can_approve_pending_candidate(client, app):
     candidate_id = _seed_pending_candidate(app)
     _login_as(client, app, "data_steward")
-    _post(client, f"/match-candidates/{candidate_id}/approve")
+    _approve(client, candidate_id)
     with app.app_context():
         c = db.session.get(MatchCandidate, candidate_id)
         assert c.status == "approved"
@@ -206,7 +211,7 @@ def test_data_steward_can_approve_pending_candidate(client, app):
 def test_approve_creates_merge_decision(client, app):
     candidate_id = _seed_pending_candidate(app)
     _login_as(client, app, "data_steward")
-    _post(client, f"/match-candidates/{candidate_id}/approve")
+    _approve(client, candidate_id)
     with app.app_context():
         decision = MergeDecision.query.filter_by(candidate_id=candidate_id).first()
         assert decision is not None
@@ -216,7 +221,7 @@ def test_approve_creates_merge_decision(client, app):
 def test_approve_creates_golden_record_and_links(client, app):
     candidate_id = _seed_pending_candidate(app)
     _login_as(client, app, "data_steward")
-    _post(client, f"/match-candidates/{candidate_id}/approve")
+    _approve(client, candidate_id)
     with app.app_context():
         assert GoldenRecord.query.count() == 1
         assert GoldenRecordLink.query.count() == 2
@@ -225,7 +230,7 @@ def test_approve_creates_golden_record_and_links(client, app):
 def test_approve_creates_audit_log_entry(client, app):
     candidate_id = _seed_pending_candidate(app)
     _login_as(client, app, "data_steward")
-    _post(client, f"/match-candidates/{candidate_id}/approve")
+    _approve(client, candidate_id)
     with app.app_context():
         log = AuditLog.query.filter_by(action="match_approved").first()
         assert log is not None
@@ -292,9 +297,9 @@ def test_administrator_cannot_reject_receives_403(client, app):
 def test_already_reviewed_candidate_cannot_be_reviewed_again(client, app):
     candidate_id = _seed_pending_candidate(app)
     _login_as(client, app, "data_steward")
-    _post(client, f"/match-candidates/{candidate_id}/approve")
-    # Try to approve again — should flash warning, not duplicate
-    _post(client, f"/match-candidates/{candidate_id}/approve")
+    _approve(client, candidate_id)
+        # Try to approve again — should flash warning, not duplicate
+    _approve(client, candidate_id)
     with app.app_context():
         assert MergeDecision.query.filter_by(candidate_id=candidate_id).count() == 1
         assert GoldenRecord.query.count() == 1
@@ -433,3 +438,82 @@ def test_no_related_candidates_shows_empty_state(client, app):
     response = client.get(f"/match-candidates/{candidate_id}")
     assert response.status_code == 200
     assert b"No related candidates found" in response.data
+
+
+# ---------------------------------------------------------------------------
+# Merge selection tests
+# ---------------------------------------------------------------------------
+
+def _seed_merge_candidate(app):
+    """Seed a candidate where record_a has email but no phone, record_b has phone but no email."""
+    with app.app_context():
+        system = SourceSystem(name="MergeTest")
+        db.session.add(system)
+        db.session.commit()
+        rec_a = SourceRecord(
+            source_system_id=system.id, external_id="M-001",
+            first_name="Jane", last_name="Doe",
+            email="jane@example.com", phone=None,
+        )
+        rec_b = SourceRecord(
+            source_system_id=system.id, external_id="M-002",
+            first_name="J.", last_name="Doe",
+            email=None, phone="+447400123456",
+        )
+        db.session.add_all([rec_a, rec_b])
+        db.session.commit()
+        candidate = MatchCandidate(record_a_id=rec_a.id, record_b_id=rec_b.id, match_score=0.85, status="pending")
+        db.session.add(candidate)
+        db.session.commit()
+        return candidate.id, rec_a.id, rec_b.id
+
+
+def test_approve_with_primary_a_uses_record_a_as_base(client, app):
+    candidate_id, rec_a_id, rec_b_id = _seed_merge_candidate(app)
+    _login_as(client, app, "data_steward")
+    _approve(client, candidate_id, primary="a")
+    with app.app_context():
+        from app.models import GoldenRecord
+        golden = GoldenRecord.query.first()
+        assert golden is not None
+        assert golden.first_name == "Jane"   # from record_a
+        assert golden.phone == "+447400123456"  # filled from record_b
+
+
+def test_approve_with_primary_b_uses_record_b_as_base(client, app):
+    candidate_id, rec_a_id, rec_b_id = _seed_merge_candidate(app)
+    _login_as(client, app, "data_steward")
+    _approve(client, candidate_id, primary="b")
+    with app.app_context():
+        from app.models import GoldenRecord
+        golden = GoldenRecord.query.first()
+        assert golden is not None
+        assert golden.first_name == "J."     # from record_b (the primary)
+        assert golden.email == "jane@example.com"  # filled from record_a
+
+
+def test_approve_audit_log_includes_primary_record_id(client, app):
+    candidate_id, rec_a_id, rec_b_id = _seed_merge_candidate(app)
+    _login_as(client, app, "data_steward")
+    _approve(client, candidate_id, primary="a")
+    with app.app_context():
+        log = AuditLog.query.filter_by(action="match_approved").first()
+        assert log is not None
+        assert "M-001" in log.detail  # record_a external_id
+
+
+def test_merge_selection_ui_shown_for_pending_candidate(client, app):
+    candidate_id, _, _ = _seed_merge_candidate(app)
+    _login_as(client, app, "data_steward")
+    response = client.get(f"/match-candidates/{candidate_id}")
+    assert response.status_code == 200
+    assert b"Approve &amp; Merge" in response.data
+    assert b"primary_record" in response.data
+
+
+def test_merge_selection_ui_not_shown_for_approved_candidate(client, app):
+    candidate_id, _, _ = _seed_merge_candidate(app)
+    _login_as(client, app, "data_steward")
+    _approve(client, candidate_id, primary="a")
+    response = client.get(f"/match-candidates/{candidate_id}")
+    assert b"primary_record" not in response.data
