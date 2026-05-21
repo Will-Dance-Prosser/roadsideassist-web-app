@@ -517,3 +517,81 @@ def test_merge_selection_ui_not_shown_for_approved_candidate(client, app):
     _approve(client, candidate_id, primary="a")
     response = client.get(f"/match-candidates/{candidate_id}")
     assert b"primary_record" not in response.data
+
+
+# ---------------------------------------------------------------------------
+# Merge into existing golden record tests
+# ---------------------------------------------------------------------------
+
+def _seed_two_candidates_sharing_record(app):
+    """
+    Three source records: A, B, C.
+    Candidate 1: A + B  (approve this first to create a golden record)
+    Candidate 2: A + C  (approving this should add C to the existing golden record)
+    """
+    with app.app_context():
+        system = SourceSystem(name="ClusterTest")
+        db.session.add(system)
+        db.session.commit()
+        rec_a = SourceRecord(source_system_id=system.id, external_id="CL-001", first_name="Tom", last_name="Jones", email="tom@example.com")
+        rec_b = SourceRecord(source_system_id=system.id, external_id="CL-002", first_name="T.",  last_name="Jones", email="tom@example.com")
+        rec_c = SourceRecord(source_system_id=system.id, external_id="CL-003", first_name="Tom", last_name="Jones", email="tom@example.com", phone="+447400123456")
+        db.session.add_all([rec_a, rec_b, rec_c])
+        db.session.commit()
+        c1 = MatchCandidate(record_a_id=rec_a.id, record_b_id=rec_b.id, match_score=0.90, status="pending")
+        c2 = MatchCandidate(record_a_id=rec_a.id, record_b_id=rec_c.id, match_score=0.85, status="pending")
+        db.session.add_all([c1, c2])
+        db.session.commit()
+        return c1.id, c2.id, rec_c.id
+
+
+def test_second_approval_adds_to_existing_golden_record(client, app):
+    c1_id, c2_id, rec_c_id = _seed_two_candidates_sharing_record(app)
+    _login_as(client, app, "data_steward")
+    _approve(client, c1_id, primary="a")   # creates golden record
+    _approve(client, c2_id, primary="a")   # should add rec_c to same golden record
+    with app.app_context():
+        from app.models import GoldenRecord, GoldenRecordLink
+        assert GoldenRecord.query.count() == 1  # only one golden record
+        assert GoldenRecordLink.query.count() == 3  # all three source records linked
+
+
+def test_second_approval_fills_missing_fields_from_new_record(client, app):
+    c1_id, c2_id, rec_c_id = _seed_two_candidates_sharing_record(app)
+    _login_as(client, app, "data_steward")
+    _approve(client, c1_id, primary="a")
+    _approve(client, c2_id, primary="a")
+    with app.app_context():
+        from app.models import GoldenRecord
+        golden = GoldenRecord.query.first()
+        # rec_c had a phone number; the golden record should now have it
+        assert golden.phone == "+447400123456"
+
+
+def test_two_separate_golden_records_merged_on_approval(client, app):
+    """Approve A+B and A+C independently so A and C both get their own golden records,
+    then approve B+C — this should merge the two golden records into one."""
+    with app.app_context():
+        system = SourceSystem(name="MergeTwo")
+        db.session.add(system)
+        db.session.commit()
+        rec_a = SourceRecord(source_system_id=system.id, external_id="MT-001", first_name="Sue", last_name="Lee", email="sue@example.com")
+        rec_b = SourceRecord(source_system_id=system.id, external_id="MT-002", first_name="S.",  last_name="Lee", email="sue@example.com")
+        rec_c = SourceRecord(source_system_id=system.id, external_id="MT-003", first_name="Sue", last_name="Lee", email="sue@example.com")
+        db.session.add_all([rec_a, rec_b, rec_c])
+        db.session.commit()
+        c1 = MatchCandidate(record_a_id=rec_a.id, record_b_id=rec_b.id, match_score=0.90, status="pending")
+        c2 = MatchCandidate(record_a_id=rec_a.id, record_b_id=rec_c.id, match_score=0.88, status="pending")
+        c3 = MatchCandidate(record_a_id=rec_b.id, record_b_id=rec_c.id, match_score=0.85, status="pending")
+        db.session.add_all([c1, c2, c3])
+        db.session.commit()
+        c1_id, c2_id, c3_id = c1.id, c2.id, c3.id
+
+    _login_as(client, app, "data_steward")
+    _approve(client, c1_id, primary="a")
+    _approve(client, c2_id, primary="a")
+    # All three should now be on one golden record
+    with app.app_context():
+        from app.models import GoldenRecord, GoldenRecordLink
+        assert GoldenRecord.query.count() == 1
+        assert GoldenRecordLink.query.count() == 3

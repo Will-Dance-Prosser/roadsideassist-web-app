@@ -43,7 +43,7 @@ def detail(id):
 
 
 @match_queue_bp.route("/match-candidates/<int:id>/approve", methods=["POST"])
-@role_required("data_steward")  # only data_steward can approve
+@role_required("data_steward")
 def approve(id):
     candidate = db.session.get(MatchCandidate, id)
     if candidate is None:
@@ -53,14 +53,12 @@ def approve(id):
         flash("This candidate has already been reviewed and cannot be changed.", "warning")
         return redirect(url_for("match_queue.detail", id=id))
 
-    # Steward picks which record is the primary (base) for the golden record
     primary = request.form.get("primary_record", "a")
     if primary == "b":
         base, other = candidate.record_b, candidate.record_a
     else:
         base, other = candidate.record_a, candidate.record_b
 
-    # Fields defined on GoldenRecord — fill from base, fall back to other where base is missing
     MERGE_FIELDS = ("first_name", "last_name", "email", "date_of_birth", "postcode", "phone")
 
     now = datetime.utcnow()
@@ -72,24 +70,79 @@ def approve(id):
     )
     db.session.add(decision)
 
-    golden = GoldenRecord(**{
-        field: getattr(base, field) or getattr(other, field)
-        for field in MERGE_FIELDS
-    })
-    db.session.add(golden)
-    db.session.flush()
+    # Check if either source record is already linked to a golden record
+    base_link = GoldenRecordLink.query.filter_by(source_record_id=base.id).first()
+    other_link = GoldenRecordLink.query.filter_by(source_record_id=other.id).first()
 
-    link_a = GoldenRecordLink(golden_record_id=golden.id, source_record_id=candidate.record_a_id)
-    link_b = GoldenRecordLink(golden_record_id=golden.id, source_record_id=candidate.record_b_id)
-    db.session.add(link_a)
-    db.session.add(link_b)
+    if base_link and other_link:
+        # Both already have golden records — merge the secondary into the primary's golden record
+        primary_golden = base_link.golden_record
+        secondary_golden = other_link.golden_record
+
+        if primary_golden.id != secondary_golden.id:
+            # Fill any missing fields on the primary golden record from the secondary
+            for field in MERGE_FIELDS:
+                if not getattr(primary_golden, field):
+                    setattr(primary_golden, field, getattr(secondary_golden, field))
+
+            # Re-link all source records from the secondary golden record to the primary
+            for link in secondary_golden.source_links:
+                if not GoldenRecordLink.query.filter_by(
+                    golden_record_id=primary_golden.id,
+                    source_record_id=link.source_record_id,
+                ).first():
+                    link.golden_record_id = primary_golden.id
+                else:
+                    db.session.delete(link)
+
+            db.session.flush()
+            db.session.delete(secondary_golden)
+
+        golden = primary_golden
+        outcome = f"merged into existing golden record GR-{golden.id:04d}"
+
+    elif base_link:
+        # Base already has a golden record — add the other source record to it
+        golden = base_link.golden_record
+        for field in MERGE_FIELDS:
+            if not getattr(golden, field):
+                setattr(golden, field, getattr(other, field))
+        if not GoldenRecordLink.query.filter_by(
+            golden_record_id=golden.id, source_record_id=other.id
+        ).first():
+            db.session.add(GoldenRecordLink(golden_record_id=golden.id, source_record_id=other.id))
+        outcome = f"added to existing golden record GR-{golden.id:04d}"
+
+    elif other_link:
+        # Other already has a golden record — add the base source record to it
+        golden = other_link.golden_record
+        for field in MERGE_FIELDS:
+            if not getattr(golden, field):
+                setattr(golden, field, getattr(base, field))
+        if not GoldenRecordLink.query.filter_by(
+            golden_record_id=golden.id, source_record_id=base.id
+        ).first():
+            db.session.add(GoldenRecordLink(golden_record_id=golden.id, source_record_id=base.id))
+        outcome = f"added to existing golden record GR-{golden.id:04d}"
+
+    else:
+        # Neither is linked — create a new golden record
+        golden = GoldenRecord(**{
+            field: getattr(base, field) or getattr(other, field)
+            for field in MERGE_FIELDS
+        })
+        db.session.add(golden)
+        db.session.flush()
+        db.session.add(GoldenRecordLink(golden_record_id=golden.id, source_record_id=candidate.record_a_id))
+        db.session.add(GoldenRecordLink(golden_record_id=golden.id, source_record_id=candidate.record_b_id))
+        outcome = f"new golden record GR-{golden.id:04d} created"
 
     db.session.add(AuditLog(
         user_id=current_user.id,
         action="match_approved",
         target_type="match_candidate",
         target_id=candidate.id,
-        detail=f"Candidate MC-{candidate.id:04d} approved by {current_user.username} — primary record: {base.external_id}",
+        detail=f"Candidate MC-{candidate.id:04d} approved by {current_user.username} — primary: {base.external_id}, {outcome}",
     ))
 
     candidate.status = "approved"
@@ -97,7 +150,8 @@ def approve(id):
     candidate.reviewed_by_id = current_user.id
 
     db.session.commit()
-    flash(f"Match candidate MC-{candidate.id:04d} approved. Golden record created from {base.external_id}.", "success")
+    flash(f"Match candidate MC-{candidate.id:04d} approved. {outcome.capitalize()}.", "success")
+
     return redirect(url_for("match_queue.detail", id=id))
 
 
