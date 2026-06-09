@@ -87,6 +87,13 @@
                 <span>Audit Log</span>
               </a>
             </li>
+            <li>
+              <a href="{{ url_for('admin.users') }}"
+                 class="ra-nav-link {% if request.endpoint and request.endpoint.startswith('admin.') %}active{% endif %}">
+                <i class="bi bi-people"></i>
+                <span>User Management</span>
+              </a>
+            </li>
             {% endif %}
           </ul>
         </nav>

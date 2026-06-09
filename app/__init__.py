@@ -42,6 +42,7 @@ def register_blueprints(app):
     from app.audit_log.routes import audit_log_bp
     from app.search.routes import search_bp
     from app.reports.routes import reports_bp
+    from app.admin.routes import admin_bp
 
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(auth_bp)
@@ -52,6 +53,7 @@ def register_blueprints(app):
     app.register_blueprint(audit_log_bp)
     app.register_blueprint(search_bp)
     app.register_blueprint(reports_bp)
+    app.register_blueprint(admin_bp)
 
     @app.errorhandler(403)
     def forbidden(e):

@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Create User | MemberMatch{% endblock %}
+
+{% block content %}
+
+  <div class="mb-4 d-flex align-items-center gap-3">
+    <a href="{{ url_for('admin.users') }}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-arrow-left"></i> User Management
+    </a>
+    <div>
+      <h1 class="h4 mb-0 fw-semibold">Create User</h1>
+      <p class="text-muted small mt-1 mb-0">Add a new portal user account</p>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm" style="max-width: 520px;">
+    <div class="card-body p-4">
+      <form method="POST" novalidate>
+        {{ form.hidden_tag() }}
+
+        <div class="row g-3">
+
+          <div class="col-12">
+            <label class="form-label small fw-medium" for="username">Username <span class="text-danger">*</span></label>
+            {{ form.username(class="form-control form-control-sm" + (" is-invalid" if form.username.errors else ""), id="username") }}
+            {% for error in form.username.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="col-12">
+            <label class="form-label small fw-medium" for="email">Email <span class="text-danger">*</span></label>
+            {{ form.email(class="form-control form-control-sm" + (" is-invalid" if form.email.errors else ""), id="email") }}
+            {% for error in form.email.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="col-12">
+            <label class="form-label small fw-medium" for="password">Password <span class="text-danger">*</span></label>
+            {{ form.password(class="form-control form-control-sm" + (" is-invalid" if form.password.errors else ""), id="password") }}
+            {% for error in form.password.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+            <div class="form-text">Must be at least 8 characters.</div>
+          </div>
+
+          <div class="col-12">
+            <label class="form-label small fw-medium" for="confirm_password">Confirm Password <span class="text-danger">*</span></label>
+            {{ form.confirm_password(class="form-control form-control-sm" + (" is-invalid" if form.confirm_password.errors else ""), id="confirm_password") }}
+            {% for error in form.confirm_password.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="col-12">
+            <label class="form-label small fw-medium" for="role">Role <span class="text-danger">*</span></label>
+            {{ form.role(class="form-select form-select-sm" + (" is-invalid" if form.role.errors else ""), id="role") }}
+            {% for error in form.role.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="col-12">
+            <div class="form-check">
+              {{ form.is_active(class="form-check-input", id="is_active") }}
+              <label class="form-check-label small" for="is_active">Active</label>
+            </div>
+            <div class="form-text">Inactive users cannot sign in.</div>
+          </div>
+
+        </div>
+
+        <div class="mt-4 d-flex gap-2">
+          {{ form.submit(class="btn btn-sm btn-primary") }}
+          <a href="{{ url_for('admin.users') }}" class="btn btn-sm btn-outline-secondary">Cancel</a>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+{% endblock %}
