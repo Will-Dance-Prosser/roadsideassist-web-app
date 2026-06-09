@@ -70,21 +70,29 @@ def _valid_json(form, field):
 class SourceRecordForm(FlaskForm):
     # Used for both creating and editing source records
     source_system_id = SelectField("Source System", coerce=int, validators=[DataRequired()])
-    external_id = StringField("External ID", validators=[DataRequired(), Length(max=128), _external_id_chars])
-    first_name = StringField("First Name", validators=[Optional(), Length(max=64), _name_chars])
-    last_name = StringField("Last Name", validators=[Optional(), Length(max=64), _name_chars])
-    email = StringField("Email", validators=[Optional(), _simple_email, Length(max=120)])
+    external_id = StringField("External ID", validators=[DataRequired(), Length(max=128), _external_id_chars], filters=[lambda x: x.strip() if x else x])
+    first_name = StringField("First Name", validators=[DataRequired(), Length(max=64), _name_chars], filters=[lambda x: x.strip() if x else x])
+    last_name = StringField("Last Name", validators=[DataRequired(), Length(max=64), _name_chars], filters=[lambda x: x.strip() if x else x])
+    email = StringField("Email", validators=[Optional(), _simple_email, Length(max=120)], filters=[lambda x: x.strip() if x else x])
     date_of_birth = DateField("Date of Birth", validators=[Optional(), _dob_not_future])
-    postcode = StringField("Postcode", validators=[Optional(), Length(max=16), _postcode_chars])
-    phone = StringField("Phone", validators=[Optional(), Length(max=32), _phone_chars])
+    postcode = StringField("Postcode", validators=[Optional(), Length(max=16), _postcode_chars], filters=[lambda x: x.strip() if x else x])
+    phone = StringField("Phone", validators=[Optional(), Length(max=32), _phone_chars], filters=[lambda x: x.strip() if x else x])
     raw_data = TextAreaField("Raw Data (JSON)", validators=[Optional(), _valid_json])
     submit = SubmitField("Save")
 
     def validate(self, extra_validators=None):
-        # At least one name field must be filled in
         if not super().validate(extra_validators):
             return False
-        if not self.first_name.data and not self.last_name.data:
-            self.first_name.errors.append("At least one of First Name or Last Name is required.")  # type: ignore[union-attr]
+        # At least one matching/contact identifier must be provided
+        has_contact = any([
+            self.email.data,
+            self.date_of_birth.data,
+            self.postcode.data,
+            self.phone.data,
+        ])
+        if not has_contact:
+            self.email.errors.append(
+                "At least one contact field (Email, Date of Birth, Postcode, or Phone) is required."
+            )
             return False
         return True

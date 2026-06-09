@@ -152,7 +152,7 @@ def approve(id):
     db.session.commit()
     flash(f"Match candidate MC-{candidate.id:04d} approved. {outcome.capitalize()}.", "success")
 
-    return redirect(url_for("match_queue.detail", id=id))
+    return redirect(url_for("match_queue.index"))
 
 
 @match_queue_bp.route("/match-candidates/<int:id>/reject", methods=["POST"])
@@ -193,4 +193,4 @@ def reject(id):
 
     db.session.commit()
     flash(f"Match candidate MC-{candidate.id:04d} rejected.", "success")
-    return redirect(url_for("match_queue.detail", id=id))
+    return redirect(url_for("match_queue.index"))

@@ -132,7 +132,7 @@ def _form_data(system_id, external_id="NEW-001"):
         "external_id": external_id,
         "first_name": "Test",
         "last_name": "User",
-        "email": "",
+        "email": "test@example.com",
         "postcode": "",
         "phone": "",
         "raw_data": "",
@@ -201,7 +201,6 @@ def test_create_requires_at_least_one_name(client, app):
     data["last_name"] = ""
     response = client.post("/source-records/new", data=data)
     assert response.status_code == 200
-    assert b"First Name or Last Name" in response.data
     with app.app_context():
         assert SourceRecord.query.count() == 0
 
@@ -683,6 +682,7 @@ def test_source_record_create_creates_audit_log(client, app):
         "external_id": "AUD-001",
         "first_name": "Test",
         "last_name": "User",
+        "email": "audit@example.com",
     }, follow_redirects=True)
     with app.app_context():
         entry = AuditLog.query.filter_by(action="source_record_created").first()
@@ -1032,3 +1032,96 @@ def test_external_id_with_hyphen_and_underscore_is_accepted(client, app):
         record = SourceRecord.query.first()
         assert record is not None
         assert record.external_id == "REC_001-A"
+
+
+# ---------------------------------------------------------------------------
+# New validation tests
+# ---------------------------------------------------------------------------
+
+def test_create_requires_first_name(client, app):
+    system_id = _seed_system(app)
+    _login_as(client, app, "data_steward")
+    data = _form_data(system_id)
+    data["first_name"] = ""
+    response = client.post("/source-records/new", data=data)
+    assert response.status_code == 200
+    with app.app_context():
+        assert SourceRecord.query.count() == 0
+
+
+def test_create_requires_last_name(client, app):
+    system_id = _seed_system(app)
+    _login_as(client, app, "data_steward")
+    data = _form_data(system_id)
+    data["last_name"] = ""
+    response = client.post("/source-records/new", data=data)
+    assert response.status_code == 200
+    with app.app_context():
+        assert SourceRecord.query.count() == 0
+
+
+def test_create_requires_at_least_one_contact_field(client, app):
+    system_id = _seed_system(app)
+    _login_as(client, app, "data_steward")
+    data = _form_data(system_id)
+    # clear all contact fields
+    data["email"] = ""
+    data["postcode"] = ""
+    data["phone"] = ""
+    # date_of_birth is not in _form_data, so it's absent from the POST
+    response = client.post("/source-records/new", data=data)
+    assert response.status_code == 200
+    assert b"At least one contact field" in response.data
+    with app.app_context():
+        assert SourceRecord.query.count() == 0
+
+
+def test_create_succeeds_with_required_fields_and_one_contact(client, app):
+    system_id = _seed_system(app)
+    _login_as(client, app, "data_steward")
+    data = _form_data(system_id)
+    data["email"] = ""
+    data["postcode"] = "SW1A 1AA"  # postcode is the only contact field
+    response = client.post("/source-records/new", data=data, follow_redirects=True)
+    assert response.status_code == 200
+    with app.app_context():
+        assert SourceRecord.query.count() == 1
+
+
+def test_edit_requires_first_name(client, app):
+    record_id, system_id = _seed_record_with_system(app)
+    _login_as(client, app, "data_steward")
+    data = _form_data(system_id, "EDIT-001")
+    data["first_name"] = ""
+    response = client.post(f"/source-records/{record_id}/edit", data=data)
+    assert response.status_code == 200
+    with app.app_context():
+        record = db.session.get(SourceRecord, record_id)
+        assert record.first_name == "Jane"  # unchanged
+
+
+def test_edit_requires_at_least_one_contact_field(client, app):
+    record_id, system_id = _seed_record_with_system(app)
+    _login_as(client, app, "data_steward")
+    data = _form_data(system_id, "EDIT-001")
+    data["email"] = ""
+    data["postcode"] = ""
+    data["phone"] = ""
+    response = client.post(f"/source-records/{record_id}/edit", data=data)
+    assert response.status_code == 200
+    assert b"At least one contact field" in response.data
+
+
+def test_validation_errors_preserve_form_values(client, app):
+    system_id = _seed_system(app)
+    _login_as(client, app, "data_steward")
+    data = _form_data(system_id)
+    # clear all contact fields so validation fails
+    data["email"] = ""
+    data["postcode"] = ""
+    data["phone"] = ""
+    data["first_name"] = "UniqueFirstName"
+    response = client.post("/source-records/new", data=data)
+    assert response.status_code == 200
+    # submitted first_name should still appear in the re-rendered form
+    assert b"UniqueFirstName" in response.data

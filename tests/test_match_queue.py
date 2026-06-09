@@ -595,3 +595,46 @@ def test_two_separate_golden_records_merged_on_approval(client, app):
         from app.models import GoldenRecord, GoldenRecordLink
         assert GoldenRecord.query.count() == 1
         assert GoldenRecordLink.query.count() == 3
+
+
+# ---------------------------------------------------------------------------
+# Approval flow UX tests
+# ---------------------------------------------------------------------------
+
+def test_approve_redirects_to_match_queue(client, app):
+    candidate_id = _seed_pending_candidate(app)
+    _login_as(client, app, "data_steward")
+    response = client.post(
+        f"/match-candidates/{candidate_id}/approve",
+        data={"primary_record": "a"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 302
+    assert "/match-queue" in response.headers["Location"]
+
+
+def test_reject_redirects_to_match_queue(client, app):
+    candidate_id = _seed_pending_candidate(app)
+    _login_as(client, app, "data_steward")
+    response = client.post(
+        f"/match-candidates/{candidate_id}/reject",
+        follow_redirects=False,
+    )
+    assert response.status_code == 302
+    assert "/match-queue" in response.headers["Location"]
+
+
+def test_approve_shows_single_success_message(client, app):
+    candidate_id = _seed_pending_candidate(app)
+    _login_as(client, app, "data_steward")
+    response = _approve(client, candidate_id)
+    # Only one success alert should appear
+    assert response.data.count(b"alert-success") == 1
+
+
+def test_detail_back_button_links_to_match_queue(client, app):
+    candidate_id = _seed_candidate(app)
+    _login(client, app)
+    response = client.get(f"/match-candidates/{candidate_id}")
+    assert response.status_code == 200
+    assert b"/match-queue" in response.data
