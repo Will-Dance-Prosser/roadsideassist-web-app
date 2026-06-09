@@ -3,7 +3,7 @@ from flask_login import current_user
 from app.auth.decorators import role_required
 from app.extensions import db
 from app.models import AuditLog, MatchRule
-from app.rules.forms import MatchRuleForm
+from app.rules.forms import ALL_METHODS, FIELD_METHODS, MatchRuleForm
 from app.services.match_scoring import recalculate_all_candidate_scores
 
 rules_bp = Blueprint("rules", __name__, template_folder="../templates")
@@ -35,7 +35,8 @@ def edit(id):
         ).first()
         if duplicate:
             flash("Another rule already uses that field name and match method combination.", "warning")
-            return render_template("rules/edit.html", form=form, rule=rule)
+            return render_template("rules/edit.html", form=form, rule=rule,
+                                   field_methods=FIELD_METHODS, all_methods=ALL_METHODS)
 
         # Capture changes before overwriting
         changes = []
@@ -69,4 +70,5 @@ def edit(id):
         flash(f"Rule '{rule.field_name} ({rule.match_method})' updated successfully.", "success")
         return redirect(url_for("rules.index"))
 
-    return render_template("rules/edit.html", form=form, rule=rule)
+    return render_template("rules/edit.html", form=form, rule=rule,
+                           field_methods=FIELD_METHODS, all_methods=ALL_METHODS)
