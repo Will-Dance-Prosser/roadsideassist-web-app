@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Edit User | MemberMatch{% endblock %}
+
+{% block content %}
+
+  <div class="mb-4 d-flex align-items-center gap-3">
+    <a href="{{ url_for('admin.users') }}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-arrow-left"></i> User Management
+    </a>
+    <div>
+      <h1 class="h4 mb-0 fw-semibold">Edit User</h1>
+      <p class="text-muted small mt-1 mb-0">{{ user.username }}</p>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm" style="max-width: 520px;">
+    <div class="card-body p-4">
+      <form method="POST" novalidate>
+        {{ form.hidden_tag() }}
+
+        <div class="row g-3">
+
+          <div class="col-12">
+            <label class="form-label small fw-medium">Username</label>
+            <input type="text" class="form-control form-control-sm" value="{{ user.username }}" disabled>
+            <div class="form-text">Usernames cannot be changed.</div>
+          </div>
+
+          <div class="col-12">
+            <label class="form-label small fw-medium" for="role">Role <span class="text-danger">*</span></label>
+            {{ form.role(class="form-select form-select-sm" + (" is-invalid" if form.role.errors else ""), id="role") }}
+            {% for error in form.role.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+            {% if user.id == current_user.id %}
+              <div class="form-text text-warning"><i class="bi bi-shield-exclamation"></i> You cannot remove your own admin role.</div>
+            {% endif %}
+          </div>
+
+          <div class="col-12">
+            <div class="form-check">
+              {% if user.id == current_user.id %}
+                {{ form.is_active(class="form-check-input", id="is_active", disabled=True) }}
+              {% else %}
+                {{ form.is_active(class="form-check-input", id="is_active") }}
+              {% endif %}
+              <label class="form-check-label small" for="is_active">Active</label>
+            </div>
+            {% if user.id == current_user.id %}
+              <div class="form-text text-warning"><i class="bi bi-shield-exclamation"></i> You cannot deactivate your own account.</div>
+            {% else %}
+              <div class="form-text">Inactive users cannot sign in.</div>
+            {% endif %}
+          </div>
+
+        </div>
+
+        <div class="mt-4 d-flex gap-2">
+          {{ form.submit(class="btn btn-sm btn-primary") }}
+          <a href="{{ url_for('admin.users') }}" class="btn btn-sm btn-outline-secondary">Cancel</a>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+{% endblock %}

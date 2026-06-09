@@ -41,3 +41,17 @@ class CreateUserForm(FlaskForm):
         from app.models import User
         if User.query.filter_by(email=field.data).first():
             raise ValidationError("That email address is already registered.")
+
+
+class EditUserForm(FlaskForm):
+    role = SelectField(
+        "Role",
+        choices=[
+            ("administrator", "Administrator"),
+            ("data_steward", "Data Steward"),
+            ("data_analyst", "Data Analyst"),
+        ],
+        validators=[DataRequired()],
+    )
+    is_active = BooleanField("Active")
+    submit = SubmitField("Save Changes")
