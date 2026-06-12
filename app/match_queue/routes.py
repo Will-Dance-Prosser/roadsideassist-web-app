@@ -194,3 +194,47 @@ def reject(id):
     db.session.commit()
     flash(f"Match candidate MC-{candidate.id:04d} rejected.", "success")
     return redirect(url_for("match_queue.index"))
+
+
+@match_queue_bp.route("/match-candidates/<int:id>/reopen", methods=["POST"])
+@role_required("data_steward")
+def reopen(id):
+    # Return a rejected candidate to the pending review queue
+    candidate = db.session.get(MatchCandidate, id)
+    if candidate is None:
+        abort(404)
+
+    if candidate.status == "pending":
+        flash("This candidate is already pending review.", "info")
+        return redirect(url_for("match_queue.detail", id=id))
+
+    if candidate.status == "approved":
+        # Approved candidates own a golden record. Revoking the approval safely
+        # requires deleting that golden record, which is done from the golden
+        # record screen (that flow already reopens its candidates).
+        flash(
+            "Approved matches cannot be reopened here. Delete the linked golden record "
+            "from the Golden Records screen to reopen the candidate for review.",
+            "warning",
+        )
+        return redirect(url_for("match_queue.detail", id=id))
+
+    previous_status = candidate.status
+    candidate.status = "pending"
+    candidate.reviewed_at = None
+    candidate.reviewed_by_id = None
+
+    db.session.add(AuditLog(
+        user_id=current_user.id,
+        action="match_reopened",
+        target_type="match_candidate",
+        target_id=candidate.id,
+        detail=(
+            f"Candidate MC-{candidate.id:04d} reopened by {current_user.username} "
+            f"(previous status: {previous_status})."
+        ),
+    ))
+
+    db.session.commit()
+    flash(f"Match candidate MC-{candidate.id:04d} reopened for review.", "success")
+    return redirect(url_for("match_queue.index"))

@@ -638,3 +638,145 @@ def test_detail_back_button_links_to_match_queue(client, app):
     response = client.get(f"/match-candidates/{candidate_id}")
     assert response.status_code == 200
     assert b"/match-queue" in response.data
+
+
+# ---------------------------------------------------------------------------
+# Reopen / decision lifecycle tests
+# ---------------------------------------------------------------------------
+
+def test_data_steward_can_reopen_rejected_candidate(client, app):
+    candidate_id = _seed_pending_candidate(app)
+    _login_as(client, app, "data_steward")
+    _post(client, f"/match-candidates/{candidate_id}/reject")
+    _post(client, f"/match-candidates/{candidate_id}/reopen")
+    with app.app_context():
+        c = db.session.get(MatchCandidate, candidate_id)
+        assert c.status == "pending"
+        assert c.reviewed_at is None
+        assert c.reviewed_by_id is None
+
+
+def test_reopen_rejected_candidate_creates_audit_log(client, app):
+    candidate_id = _seed_pending_candidate(app)
+    _login_as(client, app, "data_steward")
+    _post(client, f"/match-candidates/{candidate_id}/reject")
+    _post(client, f"/match-candidates/{candidate_id}/reopen")
+    with app.app_context():
+        log = AuditLog.query.filter_by(action="match_reopened", target_id=candidate_id).first()
+        assert log is not None
+        assert "MC-" in log.detail
+
+
+def test_reopened_candidate_returns_to_match_queue(client, app):
+    candidate_id = _seed_pending_candidate(app)
+    _login_as(client, app, "data_steward")
+    _post(client, f"/match-candidates/{candidate_id}/reject")
+    response = client.get("/match-queue")
+    assert f"MC-{candidate_id:04d}".encode() not in response.data
+    _post(client, f"/match-candidates/{candidate_id}/reopen")
+    response = client.get("/match-queue")
+    assert f"MC-{candidate_id:04d}".encode() in response.data
+
+
+def test_reopen_rejected_shows_single_success_message(client, app):
+    candidate_id = _seed_pending_candidate(app)
+    _login_as(client, app, "data_steward")
+    _post(client, f"/match-candidates/{candidate_id}/reject")
+    response = _post(client, f"/match-candidates/{candidate_id}/reopen")
+    assert response.data.count(b"alert-success") == 1
+
+
+def test_data_analyst_cannot_reopen_receives_403(client, app):
+    candidate_id = _seed_pending_candidate(app)
+    _login_as(client, app, "data_steward")
+    _post(client, f"/match-candidates/{candidate_id}/reject")
+    _login_as(client, app, "data_analyst")
+    response = client.post(f"/match-candidates/{candidate_id}/reopen")
+    assert response.status_code == 403
+
+
+def test_administrator_cannot_reopen_receives_403(client, app):
+    candidate_id = _seed_pending_candidate(app)
+    _login_as(client, app, "data_steward")
+    _post(client, f"/match-candidates/{candidate_id}/reject")
+    _login_as(client, app, "administrator")
+    response = client.post(f"/match-candidates/{candidate_id}/reopen")
+    assert response.status_code == 403
+
+
+def test_reopen_pending_candidate_is_noop(client, app):
+    candidate_id = _seed_pending_candidate(app)
+    _login_as(client, app, "data_steward")
+    _post(client, f"/match-candidates/{candidate_id}/reopen")
+    with app.app_context():
+        c = db.session.get(MatchCandidate, candidate_id)
+        assert c.status == "pending"
+        assert AuditLog.query.filter_by(action="match_reopened").count() == 0
+
+
+def test_reopen_approved_candidate_is_blocked(client, app):
+    candidate_id = _seed_pending_candidate(app)
+    _login_as(client, app, "data_steward")
+    _approve(client, candidate_id)
+    response = _post(client, f"/match-candidates/{candidate_id}/reopen")
+    assert b"cannot be reopened" in response.data
+    with app.app_context():
+        c = db.session.get(MatchCandidate, candidate_id)
+        assert c.status == "approved"
+        assert GoldenRecord.query.count() == 1
+        assert AuditLog.query.filter_by(action="match_reopened").count() == 0
+
+
+def test_rejected_candidate_detail_shows_reopen_button(client, app):
+    candidate_id = _seed_pending_candidate(app)
+    _login_as(client, app, "data_steward")
+    _post(client, f"/match-candidates/{candidate_id}/reject")
+    response = client.get(f"/match-candidates/{candidate_id}")
+    assert response.status_code == 200
+    assert b"Reopen" in response.data
+    assert f"/match-candidates/{candidate_id}/reopen".encode() in response.data
+
+
+def test_approved_candidate_detail_shows_locked_message_not_reopen_button(client, app):
+    candidate_id = _seed_pending_candidate(app)
+    _login_as(client, app, "data_steward")
+    _approve(client, candidate_id)
+    response = client.get(f"/match-candidates/{candidate_id}")
+    assert response.status_code == 200
+    assert b"Approved" in response.data
+    assert b"Locked after approval" in response.data
+    # No reopen form should be on the approved page
+    assert f"/match-candidates/{candidate_id}/reopen".encode() not in response.data
+
+
+def test_approved_candidate_hides_source_record_edit_buttons(client, app):
+    candidate_id = _seed_pending_candidate(app)
+    _login_as(client, app, "data_steward")
+    _approve(client, candidate_id)
+    response = client.get(f"/match-candidates/{candidate_id}")
+    assert response.status_code == 200
+    # Approved cards should show "Locked after approval" and not show Edit links
+    assert b"Locked after approval" in response.data
+    # The /edit URL for the source records should not appear in the candidate detail
+    with app.app_context():
+        c = db.session.get(MatchCandidate, candidate_id)
+        rec_a_id = c.record_a_id
+        rec_b_id = c.record_b_id
+    assert f"/source-records/{rec_a_id}/edit".encode() not in response.data
+    assert f"/source-records/{rec_b_id}/edit".encode() not in response.data
+
+
+def test_pending_candidate_detail_shows_approve_and_reject(client, app):
+    candidate_id = _seed_pending_candidate(app)
+    _login_as(client, app, "data_steward")
+    response = client.get(f"/match-candidates/{candidate_id}")
+    assert response.status_code == 200
+    assert b"Approve &amp; Create Golden Record" in response.data
+    assert b"Reject Match" in response.data
+
+
+def test_reject_shows_single_success_message(client, app):
+    candidate_id = _seed_pending_candidate(app)
+    _login_as(client, app, "data_steward")
+    response = _post(client, f"/match-candidates/{candidate_id}/reject")
+    assert response.data.count(b"alert-success") == 1

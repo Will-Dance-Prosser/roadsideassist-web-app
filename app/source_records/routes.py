@@ -114,6 +114,7 @@ def detail(id):
         golden_links = GoldenRecordLink.query.filter_by(source_record_id=id).all()
 
     can_delete = record.is_archived and len(match_links) == 0 and len(golden_links) == 0
+    is_locked_by_golden = GoldenRecordLink.query.filter_by(source_record_id=id).first() is not None
 
     return render_template(
         "source_records/detail.html",
@@ -123,6 +124,7 @@ def detail(id):
         match_links=match_links,
         golden_links=golden_links,
         can_delete=can_delete,
+        is_locked_by_golden=is_locked_by_golden,
     )
 
 
@@ -135,6 +137,25 @@ def edit(id):
         abort(404)
     if record.is_archived:
         flash("Archived records cannot be edited. Restore the record first.", "warning")
+        return redirect(url_for("source_records.detail", id=id))
+
+    # Lock editing once the record is linked to a golden record (approved match)
+    if GoldenRecordLink.query.filter_by(source_record_id=id).first():
+        db.session.add(AuditLog(
+            user_id=current_user.id,
+            action="source_record_edit_blocked",
+            target_type="source_record",
+            target_id=record.id,
+            detail=(
+                f"Edit blocked for {record.external_id} by {current_user.username}: "
+                f"record is linked to an approved golden record."
+            ),
+        ))
+        db.session.commit()
+        flash(
+            "This source record is locked because it is part of an approved match's golden record.",
+            "warning",
+        )
         return redirect(url_for("source_records.detail", id=id))
 
     form = SourceRecordForm(obj=record)

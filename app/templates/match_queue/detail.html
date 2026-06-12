@@ -86,9 +86,15 @@
             <i class="bi bi-box-arrow-up-right me-1" aria-hidden="true"></i>View source record
           </a>
           {% if current_user.role in ('administrator', 'data_steward') %}
-          <a href="{{ url_for('source_records.edit', id=record.id) }}" class="btn btn-sm btn-outline-primary ms-1">
-            <i class="bi bi-pencil me-1" aria-hidden="true"></i>Edit
-          </a>
+            {% if candidate.status == 'approved' %}
+            <span class="badge bg-light text-secondary border ms-1" title="Source record locked because this match has created a golden record.">
+              <i class="bi bi-lock me-1" aria-hidden="true"></i>Locked after approval
+            </span>
+            {% else %}
+            <a href="{{ url_for('source_records.edit', id=record.id) }}" class="btn btn-sm btn-outline-primary ms-1">
+              <i class="bi bi-pencil me-1" aria-hidden="true"></i>Edit
+            </a>
+            {% endif %}
           {% endif %}
         </div>
       </div>
@@ -217,6 +223,40 @@
       document.getElementById('merge-hint').textContent = 'Record ' + side.toUpperCase() + ' selected as primary';
     }
   </script>
+  {% endif %}
+
+  {% if candidate.status == 'rejected' and current_user.role == 'data_steward' %}
+  <div class="card border-0 shadow-sm mt-4">
+    <div class="card-header bg-white border-bottom fw-semibold">
+      <i class="bi bi-arrow-counterclockwise me-1"></i> Reopen Match
+    </div>
+    <div class="card-body d-flex align-items-center gap-3">
+      <p class="small text-muted mb-0">This match was rejected. Reopen it to return the candidate to the pending review queue.</p>
+      <form method="POST" action="{{ url_for('match_queue.reopen', id=candidate.id) }}" class="ms-auto">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-sm btn-outline-primary">
+          <i class="bi bi-arrow-counterclockwise me-1"></i>Reopen
+        </button>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if candidate.status == 'approved' %}
+  <div class="card border-0 shadow-sm mt-4">
+    <div class="card-header bg-white border-bottom fw-semibold">
+      <i class="bi bi-lock me-1"></i> Approved &amp; Locked
+    </div>
+    <div class="card-body">
+      <p class="small text-muted mb-1">
+        This match has been approved and the source records are now linked to a golden record.
+        Editing of these source records is locked to protect the golden record.
+      </p>
+      <p class="small text-muted mb-0">
+        To reopen this match, delete the linked golden record from the Golden Records screen — that flow safely returns the candidate to pending review.
+      </p>
+    </div>
+  </div>
   {% endif %}
 
   <!-- Related Candidates -->
