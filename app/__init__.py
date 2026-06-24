@@ -1,4 +1,5 @@
 from flask import Flask, render_template
+from flask_wtf.csrf import CSRFError
 
 from app.extensions import csrf, db, login_manager, migrate
 from config import Config
@@ -57,7 +58,11 @@ def register_blueprints(app):
 
     @app.errorhandler(403)
     def forbidden(e):
-        return render_template("errors/403.html"), 403    
+        return render_template("errors/403.html"), 403
+
+    @app.errorhandler(CSRFError)
+    def handle_csrf_error(e):
+        return render_template("errors/csrf_error.html"), 400
 
 def register_commands(app):
     from app.commands import reset_demo_mdm_data, seed_demo_mdm_data, seed_demo_users
