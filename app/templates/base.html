@@ -55,13 +55,6 @@
               </a>
             </li>
 
-            <li>
-              <span class="ra-nav-link disabled">
-                <i class="bi bi-hdd-stack"></i>
-                <span>Data Sources</span>
-              </span>
-            </li>
-
             {% if current_user.is_authenticated and current_user.role == 'administrator' %}
             <li>
               <a href="{{ url_for('rules.index') }}"
