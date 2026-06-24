@@ -71,11 +71,6 @@
         <dd class="col-sm-9 mb-3">{{ record.archived_at.strftime('%d %b %Y %H:%M') if record.archived_at else '—' }}</dd>
         {% endif %}
 
-        {% if record.raw_data %}
-        <dt class="col-sm-3 fw-medium text-muted">Raw Data</dt>
-        <dd class="col-sm-9 mb-0"><code class="small">{{ record.raw_data }}</code></dd>
-        {% endif %}
-
       </dl>
     </div>
   </div>
