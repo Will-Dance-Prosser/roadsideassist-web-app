@@ -178,7 +178,7 @@ class MatchRule(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     field_name = db.Column(db.String(64),  nullable=False)    # e.g. email, last_name
-    match_method = db.Column(db.String(32),  nullable=False)    # exact, fuzzy, phonetic
+    match_method = db.Column(db.String(32),  nullable=False)    # exact, fuzzy, normalised
     weight = db.Column(db.Float,       nullable=False)    # contribution to total score
     is_active = db.Column(db.Boolean,     nullable=False, default=True)
     created_at = db.Column(db.DateTime,    nullable=False, default=datetime.utcnow)

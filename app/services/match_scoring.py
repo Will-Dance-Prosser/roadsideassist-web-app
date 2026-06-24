@@ -7,7 +7,11 @@ for auditability.
 
 from difflib import SequenceMatcher
 
-from app.models import MatchCandidate, MatchRule
+from app.extensions import db
+from app.models import AuditLog, MatchCandidate, MatchRule, SourceRecord
+
+# Minimum score for a pair to become a pending match candidate
+REVIEW_THRESHOLD = 0.60
 
 
 def _digits(value):
@@ -97,3 +101,57 @@ def recalculate_all_candidate_scores():
     """
     for candidate in MatchCandidate.query.filter_by(status="pending").all():
         recalculate_candidate_score(candidate)
+
+
+def generate_candidates_for_source_record(record, triggered_by="source_record_created"):
+    """Compare record against all other active records and create/update/remove pending candidates.
+
+    Called after a source record is created or edited.
+    Returns the number of candidates created.
+    """
+    if record.is_archived:
+        return 0
+
+    others = SourceRecord.query.filter(
+        SourceRecord.id != record.id,
+        SourceRecord.is_archived == False,  # noqa: E712
+    ).all()
+
+    created = 0
+    for other in others:
+        score = calculate_match_score(record, other)
+
+        # Keep pair order consistent — lower id is always record_a
+        a_id, b_id = (record.id, other.id) if record.id < other.id else (other.id, record.id)
+
+        existing = MatchCandidate.query.filter_by(
+            record_a_id=a_id, record_b_id=b_id
+        ).first()
+
+        if score >= REVIEW_THRESHOLD:
+            if existing is None:
+                candidate = MatchCandidate(
+                    record_a_id=a_id,
+                    record_b_id=b_id,
+                    match_score=score,
+                    status="pending",
+                )
+                db.session.add(candidate)
+                db.session.flush()  # get candidate.id for audit log
+                db.session.add(AuditLog(
+                    user_id=None,
+                    action="match_candidate_created",
+                    target_type="match_candidate",
+                    target_id=candidate.id,
+                    detail=f"Candidate MC-{candidate.id:04d} auto-generated after {triggered_by} (score {score:.0%})",
+                ))
+                created += 1
+            elif existing.status == "pending":
+                # Update score if the candidate hasn't been reviewed
+                existing.match_score = score
+        else:
+            # Score dropped below threshold — remove the pending candidate if it has no decisions
+            if existing and existing.status == "pending" and not existing.decisions:
+                db.session.delete(existing)
+
+    return created

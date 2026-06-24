@@ -241,3 +241,71 @@ def test_match_rule_audit_mentions_score_recalculation(client, app):
         entry = AuditLog.query.filter_by(action="match_rule_updated").first()
         assert "recalculated" in entry.detail.lower()
 
+
+# ---------------------------------------------------------------------------
+# Match method validation tests
+# ---------------------------------------------------------------------------
+
+def test_phonetic_method_is_rejected(client, app):
+    rule_id = _seed_rule_and_get_id(app)
+    _create_and_login(client, app, "admin", "admin@example.com", "administrator")
+    response = client.post(f"/rules/{rule_id}/edit",
+                           data=_edit_form(field_name="email", match_method="phonetic", weight="0.35"))
+    assert response.status_code == 200
+    with app.app_context():
+        rule = db.session.get(MatchRule, rule_id)
+        assert rule.match_method != "phonetic"
+
+
+def test_normalised_not_allowed_for_email(client, app):
+    rule_id = _seed_rule_and_get_id(app)
+    _create_and_login(client, app, "admin", "admin@example.com", "administrator")
+    response = client.post(f"/rules/{rule_id}/edit",
+                           data=_edit_form(field_name="email", match_method="normalised", weight="0.35"))
+    assert response.status_code == 200
+    with app.app_context():
+        rule = db.session.get(MatchRule, rule_id)
+        assert rule.match_method != "normalised"
+
+
+def test_fuzzy_not_allowed_for_date_of_birth(client, app):
+    with app.app_context():
+        rule = MatchRule(field_name="date_of_birth", match_method="exact", weight=0.20, is_active=True)
+        db.session.add(rule)
+        db.session.commit()
+        rule_id = rule.id
+    _create_and_login(client, app, "admin", "admin@example.com", "administrator")
+    response = client.post(f"/rules/{rule_id}/edit",
+                           data=_edit_form(field_name="date_of_birth", match_method="fuzzy", weight="0.20"))
+    assert response.status_code == 200
+    with app.app_context():
+        rule = db.session.get(MatchRule, rule_id)
+        assert rule.match_method == "exact"  # unchanged
+
+
+def test_valid_method_for_phone_is_accepted(client, app):
+    with app.app_context():
+        rule = MatchRule(field_name="phone", match_method="exact", weight=0.25, is_active=True)
+        db.session.add(rule)
+        db.session.commit()
+        rule_id = rule.id
+    _create_and_login(client, app, "admin", "admin@example.com", "administrator")
+    response = client.post(f"/rules/{rule_id}/edit",
+                           data=_edit_form(field_name="phone", match_method="normalised", weight="0.25"),
+                           follow_redirects=True)
+    assert response.status_code == 200
+    with app.app_context():
+        rule = db.session.get(MatchRule, rule_id)
+        assert rule.match_method == "normalised"
+
+
+def test_field_name_must_be_known_field(client, app):
+    rule_id = _seed_rule_and_get_id(app)
+    _create_and_login(client, app, "admin", "admin@example.com", "administrator")
+    response = client.post(f"/rules/{rule_id}/edit",
+                           data=_edit_form(field_name="favourite_colour", match_method="exact", weight="0.35"))
+    assert response.status_code == 200
+    with app.app_context():
+        rule = db.session.get(MatchRule, rule_id)
+        assert rule.field_name == "email"  # unchanged
+

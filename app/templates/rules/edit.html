@@ -23,7 +23,7 @@
 
           <div class="col-12">
             <label class="form-label small fw-medium" for="field_name">Field Name <span class="text-danger">*</span></label>
-            {{ form.field_name(class="form-control form-control-sm" + (" is-invalid" if form.field_name.errors else ""), id="field_name") }}
+            {{ form.field_name(class="form-select form-select-sm" + (" is-invalid" if form.field_name.errors else ""), id="field_name") }}
             {% for error in form.field_name.errors %}
               <div class="invalid-feedback">{{ error }}</div>
             {% endfor %}
@@ -35,6 +35,7 @@
             {% for error in form.match_method.errors %}
               <div class="invalid-feedback">{{ error }}</div>
             {% endfor %}
+            <div class="form-text" id="method-hint"></div>
           </div>
 
           <div class="col-12">
@@ -65,4 +66,50 @@
     </div>
   </div>
 
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const FIELD_METHODS = {{ field_methods | tojson }};
+  const ALL_METHODS   = {{ all_methods | tojson }};
+
+  const HINTS = {
+    "exact":      "Case-insensitive exact match.",
+    "fuzzy":      "Similar strings (≥80% similarity) — good for names and email.",
+    "normalised": "Strips spaces and casing before comparing — use for phone and postcode.",
+  };
+
+  function updateMethods() {
+    const field   = document.getElementById('field_name').value;
+    const sel     = document.getElementById('match_method');
+    const current = sel.value;
+    const allowed = FIELD_METHODS[field] || ALL_METHODS;
+
+    // Rebuild options, keeping current selection if still valid
+    sel.innerHTML = '';
+    allowed.forEach(function(m) {
+      const opt = document.createElement('option');
+      opt.value = m;
+      opt.textContent = m;
+      if (m === current) opt.selected = true;
+      sel.appendChild(opt);
+    });
+
+    // If previous selection is no longer valid, default to first
+    if (!allowed.includes(current) && allowed.length) {
+      sel.value = allowed[0];
+    }
+
+    // Show hint
+    document.getElementById('method-hint').textContent = HINTS[sel.value] || '';
+  }
+
+  document.getElementById('field_name').addEventListener('change', updateMethods);
+  document.getElementById('match_method').addEventListener('change', function() {
+    document.getElementById('method-hint').textContent = HINTS[this.value] || '';
+  });
+
+  // Run on page load to set initial hint
+  updateMethods();
+</script>
 {% endblock %}

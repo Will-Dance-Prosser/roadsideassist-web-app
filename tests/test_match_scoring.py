@@ -294,3 +294,127 @@ class TestRecalculateAllCandidateScores:
             assert c1.match_score == 0.35
             assert c2.match_score == 0.35
             assert approved.match_score == 0.98  # unchanged
+
+
+# ---------------------------------------------------------------------------
+# generate_candidates_for_source_record tests
+# ---------------------------------------------------------------------------
+
+from app.services.match_scoring import generate_candidates_for_source_record, REVIEW_THRESHOLD
+
+
+def test_create_generates_candidate_when_score_above_threshold(app, system):
+    with app.app_context():
+        system = db.session.merge(system)
+        _make_rule("email", "exact", 1.0)  # 100% weight — guaranteed match
+        rec_a = _make_record(system.id, "A1", email="match@test.com")
+        rec_b = _make_record(system.id, "A2", email="match@test.com")
+        db.session.commit()
+        db.session.refresh(rec_b)
+        n = generate_candidates_for_source_record(rec_b)
+        assert n == 1
+        candidate = MatchCandidate.query.first()
+        assert candidate is not None
+        assert candidate.status == "pending"
+        assert candidate.match_score == 1.0
+
+
+def test_no_candidate_created_when_score_below_threshold(app, system):
+    with app.app_context():
+        system = db.session.merge(system)
+        _make_rule("email", "exact", 0.30)  # below REVIEW_THRESHOLD
+        rec_a = _make_record(system.id, "B1", email="a@test.com")
+        rec_b = _make_record(system.id, "B2", email="b@test.com")
+        db.session.commit()
+        db.session.refresh(rec_b)
+        n = generate_candidates_for_source_record(rec_b)
+        assert n == 0
+        assert MatchCandidate.query.count() == 0
+
+
+def test_no_duplicate_candidate_for_reversed_pair(app, system):
+    with app.app_context():
+        system = db.session.merge(system)
+        _make_rule("email", "exact", 1.0)
+        rec_a = _make_record(system.id, "C1", email="dup@test.com")
+        rec_b = _make_record(system.id, "C2", email="dup@test.com")
+        db.session.commit()
+        db.session.refresh(rec_a)
+        db.session.refresh(rec_b)
+        generate_candidates_for_source_record(rec_a)
+        generate_candidates_for_source_record(rec_b)  # should not create a second one
+        assert MatchCandidate.query.count() == 1
+
+
+def test_edit_updates_existing_pending_candidate_score(app, system):
+    with app.app_context():
+        system = db.session.merge(system)
+        _make_rule("email", "exact", 1.0)
+        rec_a = _make_record(system.id, "D1", email="old@test.com")
+        rec_b = _make_record(system.id, "D2", email="old@test.com")
+        _make_candidate(rec_a, rec_b, score=1.0, status="pending")
+        db.session.commit()
+        # Change rec_b email so score drops to 0 and candidate is removed
+        db.session.refresh(rec_b)
+        rec_b.email = "different@test.com"
+        db.session.commit()
+        db.session.refresh(rec_b)
+        generate_candidates_for_source_record(rec_b, triggered_by="source_record_edited")
+        # Score is now 0 — pending candidate with no decisions should be removed
+        assert MatchCandidate.query.count() == 0
+
+
+def test_pending_candidate_below_threshold_is_deleted(app, system):
+    with app.app_context():
+        system = db.session.merge(system)
+        _make_rule("email", "exact", 1.0)
+        rec_a = _make_record(system.id, "E1", email="gone@test.com")
+        rec_b = _make_record(system.id, "E2", email="gone@test.com")
+        candidate = _make_candidate(rec_a, rec_b, score=1.0, status="pending")
+        db.session.commit()
+        db.session.refresh(rec_b)
+        rec_b.email = "nomatch@test.com"
+        db.session.commit()
+        db.session.refresh(rec_b)
+        generate_candidates_for_source_record(rec_b)
+        assert MatchCandidate.query.count() == 0
+
+
+def test_approved_candidate_not_updated_by_generate(app, system):
+    with app.app_context():
+        system = db.session.merge(system)
+        _make_rule("email", "exact", 1.0)
+        rec_a = _make_record(system.id, "F1", email="keep@test.com")
+        rec_b = _make_record(system.id, "F2", email="keep@test.com")
+        candidate = _make_candidate(rec_a, rec_b, score=0.99, status="approved")
+        db.session.commit()
+        db.session.refresh(rec_b)
+        generate_candidates_for_source_record(rec_b)
+        db.session.refresh(candidate)
+        assert candidate.match_score == 0.99  # untouched
+        assert candidate.status == "approved"
+
+
+def test_archived_record_is_skipped_as_comparison_target(app, system):
+    with app.app_context():
+        system = db.session.merge(system)
+        _make_rule("email", "exact", 1.0)
+        rec_a = _make_record(system.id, "G1", email="arch@test.com", is_archived=True)
+        rec_b = _make_record(system.id, "G2", email="arch@test.com")
+        db.session.commit()
+        db.session.refresh(rec_b)
+        n = generate_candidates_for_source_record(rec_b)
+        assert n == 0
+        assert MatchCandidate.query.count() == 0
+
+
+def test_archived_source_record_generates_no_candidates(app, system):
+    with app.app_context():
+        system = db.session.merge(system)
+        _make_rule("email", "exact", 1.0)
+        rec_a = _make_record(system.id, "H1", email="arch2@test.com")
+        rec_b = _make_record(system.id, "H2", email="arch2@test.com", is_archived=True)
+        db.session.commit()
+        db.session.refresh(rec_b)
+        n = generate_candidates_for_source_record(rec_b)
+        assert n == 0

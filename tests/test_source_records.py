@@ -2,7 +2,7 @@ import pytest
 from datetime import date, datetime
 from app import create_app
 from app.extensions import db
-from app.models import GoldenRecord, GoldenRecordLink, MatchCandidate, SourceRecord, SourceSystem, User
+from app.models import AuditLog, GoldenRecord, GoldenRecordLink, MatchCandidate, SourceRecord, SourceSystem, User
 from config import TestingConfig
 
 
@@ -132,7 +132,7 @@ def _form_data(system_id, external_id="NEW-001"):
         "external_id": external_id,
         "first_name": "Test",
         "last_name": "User",
-        "email": "",
+        "email": "test@example.com",
         "postcode": "",
         "phone": "",
         "raw_data": "",
@@ -201,7 +201,6 @@ def test_create_requires_at_least_one_name(client, app):
     data["last_name"] = ""
     response = client.post("/source-records/new", data=data)
     assert response.status_code == 200
-    assert b"First Name or Last Name" in response.data
     with app.app_context():
         assert SourceRecord.query.count() == 0
 
@@ -683,6 +682,7 @@ def test_source_record_create_creates_audit_log(client, app):
         "external_id": "AUD-001",
         "first_name": "Test",
         "last_name": "User",
+        "email": "audit@example.com",
     }, follow_redirects=True)
     with app.app_context():
         entry = AuditLog.query.filter_by(action="source_record_created").first()
@@ -1032,3 +1032,178 @@ def test_external_id_with_hyphen_and_underscore_is_accepted(client, app):
         record = SourceRecord.query.first()
         assert record is not None
         assert record.external_id == "REC_001-A"
+
+
+# ---------------------------------------------------------------------------
+# New validation tests
+# ---------------------------------------------------------------------------
+
+def test_create_requires_first_name(client, app):
+    system_id = _seed_system(app)
+    _login_as(client, app, "data_steward")
+    data = _form_data(system_id)
+    data["first_name"] = ""
+    response = client.post("/source-records/new", data=data)
+    assert response.status_code == 200
+    with app.app_context():
+        assert SourceRecord.query.count() == 0
+
+
+def test_create_requires_last_name(client, app):
+    system_id = _seed_system(app)
+    _login_as(client, app, "data_steward")
+    data = _form_data(system_id)
+    data["last_name"] = ""
+    response = client.post("/source-records/new", data=data)
+    assert response.status_code == 200
+    with app.app_context():
+        assert SourceRecord.query.count() == 0
+
+
+def test_create_requires_at_least_one_contact_field(client, app):
+    system_id = _seed_system(app)
+    _login_as(client, app, "data_steward")
+    data = _form_data(system_id)
+    # clear all contact fields
+    data["email"] = ""
+    data["postcode"] = ""
+    data["phone"] = ""
+    # date_of_birth is not in _form_data, so it's absent from the POST
+    response = client.post("/source-records/new", data=data)
+    assert response.status_code == 200
+    assert b"At least one contact field" in response.data
+    with app.app_context():
+        assert SourceRecord.query.count() == 0
+
+
+def test_create_succeeds_with_required_fields_and_one_contact(client, app):
+    system_id = _seed_system(app)
+    _login_as(client, app, "data_steward")
+    data = _form_data(system_id)
+    data["email"] = ""
+    data["postcode"] = "SW1A 1AA"  # postcode is the only contact field
+    response = client.post("/source-records/new", data=data, follow_redirects=True)
+    assert response.status_code == 200
+    with app.app_context():
+        assert SourceRecord.query.count() == 1
+
+
+def test_edit_requires_first_name(client, app):
+    record_id, system_id = _seed_record_with_system(app)
+    _login_as(client, app, "data_steward")
+    data = _form_data(system_id, "EDIT-001")
+    data["first_name"] = ""
+    response = client.post(f"/source-records/{record_id}/edit", data=data)
+    assert response.status_code == 200
+    with app.app_context():
+        record = db.session.get(SourceRecord, record_id)
+        assert record.first_name == "Jane"  # unchanged
+
+
+def test_edit_requires_at_least_one_contact_field(client, app):
+    record_id, system_id = _seed_record_with_system(app)
+    _login_as(client, app, "data_steward")
+    data = _form_data(system_id, "EDIT-001")
+    data["email"] = ""
+    data["postcode"] = ""
+    data["phone"] = ""
+    response = client.post(f"/source-records/{record_id}/edit", data=data)
+    assert response.status_code == 200
+    assert b"At least one contact field" in response.data
+
+
+def test_validation_errors_preserve_form_values(client, app):
+    system_id = _seed_system(app)
+    _login_as(client, app, "data_steward")
+    data = _form_data(system_id)
+    # clear all contact fields so validation fails
+    data["email"] = ""
+    data["postcode"] = ""
+    data["phone"] = ""
+    data["first_name"] = "UniqueFirstName"
+    response = client.post("/source-records/new", data=data)
+    assert response.status_code == 200
+    # submitted first_name should still appear in the re-rendered form
+    assert b"UniqueFirstName" in response.data
+
+
+# ---------------------------------------------------------------------------
+# Edit-lock tests: source records linked to a golden record cannot be edited
+# ---------------------------------------------------------------------------
+
+def _seed_locked_record(app):
+    """Seed a source record linked to a golden record, return its id."""
+    with app.app_context():
+        system = SourceSystem(name="LockTest")
+        db.session.add(system)
+        db.session.commit()
+        record = SourceRecord(
+            source_system_id=system.id,
+            external_id="LOCK-001",
+            first_name="Locked",
+            last_name="User",
+            email="locked@example.com",
+        )
+        db.session.add(record)
+        db.session.commit()
+        golden = GoldenRecord(first_name="Locked", last_name="User", email="locked@example.com")
+        db.session.add(golden)
+        db.session.commit()
+        db.session.add(GoldenRecordLink(golden_record_id=golden.id, source_record_id=record.id))
+        db.session.commit()
+        return record.id
+
+
+def test_edit_locked_source_record_get_is_blocked(client, app):
+    record_id = _seed_locked_record(app)
+    _login_as(client, app, "data_steward")
+    response = client.get(f"/source-records/{record_id}/edit", follow_redirects=False)
+    assert response.status_code == 302
+    assert f"/source-records/{record_id}" in response.headers["Location"]
+
+
+def test_edit_locked_source_record_post_is_blocked(client, app):
+    record_id = _seed_locked_record(app)
+    _login_as(client, app, "data_steward")
+    with app.app_context():
+        system_id = db.session.get(SourceRecord, record_id).source_system_id
+    data = _form_data(system_id, external_id="LOCK-001")
+    data["first_name"] = "Tampered"
+    response = client.post(f"/source-records/{record_id}/edit", data=data, follow_redirects=True)
+    assert response.status_code == 200
+    assert b"locked" in response.data.lower()
+    with app.app_context():
+        record = db.session.get(SourceRecord, record_id)
+        assert record.first_name == "Locked"  # unchanged
+
+
+def test_edit_locked_source_record_writes_audit_log(client, app):
+    record_id = _seed_locked_record(app)
+    _login_as(client, app, "data_steward")
+    client.get(f"/source-records/{record_id}/edit", follow_redirects=True)
+    with app.app_context():
+        log = AuditLog.query.filter_by(
+            action="source_record_edit_blocked", target_id=record_id
+        ).first()
+        assert log is not None
+        assert "LOCK-001" in log.detail
+
+
+def test_locked_source_record_detail_hides_edit_button(client, app):
+    record_id = _seed_locked_record(app)
+    _login_as(client, app, "data_steward")
+    response = client.get(f"/source-records/{record_id}")
+    assert response.status_code == 200
+    assert b"Locked after approval" in response.data
+    assert f"/source-records/{record_id}/edit".encode() not in response.data
+
+
+def test_unlocked_source_record_detail_still_shows_edit_button(client, app):
+    _seed_record(app)
+    with app.app_context():
+        record_id = SourceRecord.query.filter_by(external_id="CRM-001").first().id
+    _login_as(client, app, "data_steward")
+    response = client.get(f"/source-records/{record_id}")
+    assert response.status_code == 200
+    assert b"Locked after approval" not in response.data
+    assert f"/source-records/{record_id}/edit".encode() in response.data

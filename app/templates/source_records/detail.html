@@ -14,9 +14,15 @@
     </div>
     {% if current_user.role in ('administrator', 'data_steward') and not record.is_archived %}
     <div class="ms-auto">
-      <a href="{{ url_for('source_records.edit', id=record.id) }}" class="btn btn-sm btn-primary">
-        <i class="bi bi-pencil me-1" aria-hidden="true"></i> Edit
-      </a>
+      {% if is_locked_by_golden %}
+        <span class="badge bg-light text-secondary border" title="Source record locked because this match has created a golden record.">
+          <i class="bi bi-lock me-1" aria-hidden="true"></i>Locked after approval
+        </span>
+      {% else %}
+        <a href="{{ url_for('source_records.edit', id=record.id) }}" class="btn btn-sm btn-primary">
+          <i class="bi bi-pencil me-1" aria-hidden="true"></i> Edit
+        </a>
+      {% endif %}
     </div>
     {% endif %}
   </div>
