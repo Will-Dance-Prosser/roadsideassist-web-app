@@ -3,7 +3,17 @@ from datetime import date
 import click
 from flask.cli import with_appcontext
 from app.extensions import db
-from app.models import AuditLog,MatchCandidate, MatchRule, SourceRecord, SourceSystem, User
+from app.models import (
+    AuditLog,
+    GoldenRecord,
+    GoldenRecordLink,
+    MatchCandidate,
+    MatchRule,
+    MergeDecision,
+    SourceRecord,
+    SourceSystem,
+    User,
+)
 from app.services.match_scoring import generate_candidates_for_source_record
 
 
