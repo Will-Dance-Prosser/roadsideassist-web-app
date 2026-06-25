@@ -3,8 +3,18 @@ from datetime import date
 import click
 from flask.cli import with_appcontext
 from app.extensions import db
-from app.models import AuditLog, GoldenRecord, GoldenRecordLink, MatchCandidate, MatchRule, MergeDecision, SourceRecord, SourceSystem, User
-from app.services.match_scoring import calculate_match_score
+from app.models import (
+    AuditLog,
+    GoldenRecord,
+    GoldenRecordLink,
+    MatchCandidate,
+    MatchRule,
+    MergeDecision,
+    SourceRecord,
+    SourceSystem,
+    User,
+)
+from app.services.match_scoring import generate_candidates_for_source_record
 
 
 DEMO_USERS = [
@@ -55,21 +65,30 @@ DEMO_SOURCE_SYSTEMS = [
 
 DEMO_SOURCE_RECORDS = [
     # CRM records
-    {"system": "CRM",               "external_id": "CRM-001", "first_name": "John",     "last_name": "Smith",    "email": "j.smith@email.com",       "phone": "07700900001", "postcode": "SW1A 1AA", "date_of_birth": date(1980, 4, 12)},
-    {"system": "CRM",               "external_id": "CRM-002", "first_name": "Patricia", "last_name": "Patel",    "email": "p.patel@email.com",       "phone": "07700900002", "postcode": "M1 1AE",  "date_of_birth": date(1975, 9, 3)},
-    {"system": "CRM",               "external_id": "CRM-003", "first_name": "Charles",  "last_name": "Johnson",  "email": "c.johnson@email.com",     "phone": "07700900003", "postcode": "B1 1BB",  "date_of_birth": date(1990, 1, 22)},
-    {"system": "CRM",               "external_id": "CRM-004", "first_name": "Sara",     "last_name": "Ahmed",    "email": "s.ahmed@email.com",       "phone": "07700900004", "postcode": "E1 6AN",  "date_of_birth": date(1988, 7, 15)},
+    {"system": "CRM", "external_id": "CRM-001", "first_name": "John", "last_name": "Smith", "email": "j.smith@email.com", "phone": "07700 900001", "postcode": "SW1A 1AA", "date_of_birth": date(1980, 4, 12)},
+    {"system": "CRM", "external_id": "CRM-002", "first_name": "Patricia", "last_name": "Patel", "email": "p.patel@email.com", "phone": "07700 900002", "postcode": "M1 1AE", "date_of_birth": date(1975, 9, 3)},
+    {"system": "CRM", "external_id": "CRM-003", "first_name": "Charles", "last_name": "Johnson", "email": "c.johnson@email.com", "phone": "07700 900003", "postcode": "B1 1BB", "date_of_birth": date(1990, 1, 22)},
+    {"system": "CRM", "external_id": "CRM-004", "first_name": "Sara", "last_name": "Ahmed", "email": "s.ahmed@email.com", "phone": "07700 900004", "postcode": "E1 6AN", "date_of_birth": date(1988, 7, 15)},
+    {"system": "CRM", "external_id": "CRM-005", "first_name": "Michael", "last_name": "Owen", "email": "m.owen@email.com", "phone": "07700 900007", "postcode": "CF10 1EP", "date_of_birth": date(1982, 6, 18)},
+    {"system": "CRM", "external_id": "CRM-006", "first_name": "Emma", "last_name": "Taylor", "email": "emma.taylor@email.com", "phone": "07700 900008", "postcode": "G1 1AA", "date_of_birth": date(1995, 12, 4)},
+
     # Web Portal records — near-duplicates of CRM records to demonstrate matching
-    {"system": "Web Portal",        "external_id": "WEB-001", "first_name": "J.",        "last_name": "Smith",    "email": "j.smith@email.com",       "phone": "07700900001", "postcode": "SW1A 1AA", "date_of_birth": date(1980, 4, 12)},
-    {"system": "Web Portal",        "external_id": "WEB-002", "first_name": "Pat",       "last_name": "Patel",    "email": "p.patel@email.com",       "phone": "07700900002", "postcode": "M1 1AE",  "date_of_birth": date(1975, 9, 3)},
-    {"system": "Web Portal",        "external_id": "WEB-003", "first_name": "Laura",    "last_name": "Williams", "email": "l.williams@email.com",    "phone": "07700900005", "postcode": "LS1 1BA", "date_of_birth": date(1993, 3, 8)},
+    {"system": "Web Portal", "external_id": "WEB-001", "first_name": "J.", "last_name": "Smith", "email": "j.smith@email.com", "phone": "07700 900001", "postcode": "SW1A 1AA", "date_of_birth": date(1980, 4, 12)},
+    {"system": "Web Portal", "external_id": "WEB-002", "first_name": "Pat", "last_name": "Patel", "email": "p.patel@email.com", "phone": "07700 900002", "postcode": "M1 1AE", "date_of_birth": date(1975, 9, 3)},
+    {"system": "Web Portal", "external_id": "WEB-003", "first_name": "Laura", "last_name": "Williams", "email": "l.williams@email.com", "phone": "07700 900005", "postcode": "LS1 1BA", "date_of_birth": date(1993, 3, 8)},
+    {"system": "Web Portal", "external_id": "WEB-004", "first_name": "Mike", "last_name": "Owen", "email": "m.owen@email.com", "phone": "07700 900007", "postcode": "CF10 1EP", "date_of_birth": date(1982, 6, 18)},
+    {"system": "Web Portal", "external_id": "WEB-005", "first_name": "E.", "last_name": "Taylor", "email": "emma.taylor@email.com", "phone": "07700 900008", "postcode": "G1 1AA", "date_of_birth": date(1995, 12, 4)},
+
     # Legacy Membership records
-    {"system": "Legacy Membership", "external_id": "LEG-001", "first_name": "C.",        "last_name": "Johnson",  "email": "cjohnson@oldmail.com",    "phone": "07700900003", "postcode": "B1 1BB",  "date_of_birth": date(1990, 1, 22)},
-    {"system": "Legacy Membership", "external_id": "LEG-002", "first_name": "Sara",     "last_name": "Ahmad",    "email": "s.ahmed@email.com",       "phone": "07700900004", "postcode": "E1 6AN",  "date_of_birth": date(1988, 7, 15)},
-    {"system": "Legacy Membership", "external_id": "LEG-003", "first_name": "Robert",   "last_name": "Brown",    "email": "r.brown@email.com",       "phone": "07700900006", "postcode": "EH1 1YZ", "date_of_birth": date(1965, 11, 30)},
+    {"system": "Legacy Membership", "external_id": "LEG-001", "first_name": "C.", "last_name": "Johnson", "email": "cjohnson@oldmail.com", "phone": "07700 900003", "postcode": "B1 1BB", "date_of_birth": date(1990, 1, 22)},
+    {"system": "Legacy Membership", "external_id": "LEG-002", "first_name": "Sara", "last_name": "Ahmad", "email": "s.ahmed@email.com", "phone": "07700 900004", "postcode": "E1 6AN", "date_of_birth": date(1988, 7, 15)},
+    {"system": "Legacy Membership", "external_id": "LEG-003", "first_name": "Robert", "last_name": "Brown", "email": "r.brown@email.com", "phone": "07700 900006", "postcode": "EH1 1YZ", "date_of_birth": date(1965, 11, 30)},
+    {"system": "Legacy Membership", "external_id": "LEG-004", "first_name": "Michael", "last_name": "Owens", "email": "michael.owen@oldmail.com", "phone": "07700 900007", "postcode": "CF10 1EP", "date_of_birth": date(1982, 6, 18)},
+
     # Vehicle Records
-    {"system": "Vehicle Records",   "external_id": "VEH-001", "first_name": "John",     "last_name": "Smith",    "email": None,                      "phone": None,          "postcode": "SW1A 1AA", "date_of_birth": date(1980, 4, 12)},
-    {"system": "Vehicle Records",   "external_id": "VEH-002", "first_name": "Laura",    "last_name": "Williams", "email": "l.williams@email.com",    "phone": "07700900005", "postcode": "LS1 1BA", "date_of_birth": date(1993, 3, 8)},
+    {"system": "Vehicle Records", "external_id": "VEH-001", "first_name": "John", "last_name": "Smith", "email": None, "phone": None, "postcode": "SW1A 1AA", "date_of_birth": date(1980, 4, 12)},
+    {"system": "Vehicle Records", "external_id": "VEH-002", "first_name": "Laura", "last_name": "Williams", "email": "l.williams@email.com", "phone": "07700 900005", "postcode": "LS1 1BA", "date_of_birth": date(1993, 3, 8)},
+    {"system": "Vehicle Records", "external_id": "VEH-003", "first_name": "Emma", "last_name": "Taylor", "email": None, "phone": None, "postcode": "G1 1AA", "date_of_birth": date(1995, 12, 4)},
 ]
 
 DEMO_MATCH_RULES = [
@@ -84,7 +103,7 @@ DEMO_MATCH_RULES = [
 @click.command("seed-demo-mdm-data")
 @with_appcontext
 def seed_demo_mdm_data():
-    # Seeds source systems, records, match candidates and rules for demo/dev use
+    # Seeds source systems, records and rules, then auto-generates pending match candidates.
 
     db.create_all()
 
@@ -146,45 +165,22 @@ def seed_demo_mdm_data():
             click.echo(f"  rule created:   {data['field_name']} ({data['match_method']}, weight={data['weight']})")
 
     db.session.commit()
+    
+    # Auto-generate pending match candidates using the real scoring service.
+    # This keeps the demo realistic: the queue is produced by the application's
+    # matching rules rather than by hardcoded candidate rows.
+    click.echo("\nGenerating match candidates from seeded source records...")
 
-
-
-    # Match Candidates - each tuple is (ext_id_a, ext_id_b, historical_score, status)
-    # Approved/rejected candidates keep their historical scores for auditability.
-    # Pending candidates have their scores calculated from active rules.
-    demo_candidates = [
-        ("CRM-001", "WEB-001", 0.98, "approved"),   # same person, exact email+phone+dob match
-        ("CRM-002", "WEB-002", 0.91, "approved"),   # same person, exact email match
-        ("CRM-003", "LEG-001", None, "pending"),    # likely same — different email format
-        ("CRM-004", "LEG-002", None, "pending"),    # possible match — surname spelled differently
-        ("WEB-003", "VEH-002", 0.95, "approved"),   # same person across two systems
-        ("CRM-001", "VEH-001", 0.94, "rejected"),   # false positive — same name, confirmed different
-    ]
-
-    for ext_a, ext_b, historical_score, status in demo_candidates:
-        rec_a = records.get(ext_a)
-        rec_b = records.get(ext_b)
-        if rec_a and rec_b:
-            existing = MatchCandidate.query.filter_by(
-                record_a_id=rec_a.id, record_b_id=rec_b.id
-            ).first()
-            if existing:
-                click.echo(f"  candidate exists:  {ext_a} ↔ {ext_b}")
-            else:
-                if status == "pending":
-                    score = calculate_match_score(rec_a, rec_b)
-                else:
-                    score = historical_score  # preserve historical scores for approved/rejected
-                candidate = MatchCandidate(
-                    record_a_id=rec_a.id,
-                    record_b_id=rec_b.id,
-                    match_score=score,
-                    status=status,
-                )
-                db.session.add(candidate)
-                click.echo(f"  candidate created: {ext_a} ↔ {ext_b} ({status}, score={score})")
+    total_created = 0
+    for record in SourceRecord.query.filter_by(is_archived=False).all():
+        created = generate_candidates_for_source_record(
+            record,
+            triggered_by="demo_seed",
+        )
+        total_created += created
 
     db.session.commit()
+    click.echo(f"  auto-generated pending candidates: {total_created}")
 
     # Drop a single audit log entry so there's something to show in the UI
     existing_log = AuditLog.query.filter_by(action="demo_seed").first()

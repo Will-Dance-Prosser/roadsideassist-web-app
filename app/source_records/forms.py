@@ -23,19 +23,27 @@ def _external_id_chars(form, field):
     if field.data and not re.match(r"^[A-Za-z0-9_\-]+$", field.data):
         raise ValidationError("Only letters, numbers, hyphens and underscores are allowed.")
 
+def _is_demo_uk_mobile(parsed):
+    """Allow reserved UK drama/demo mobile numbers: 07700 900000-07700 900999."""
+    national = phonenumbers.national_significant_number(parsed)
+    return parsed.country_code == 44 and re.fullmatch(r"7700900\d{3}", national)
+
 
 def _phone_chars(form, field):
     # Parse and validate with the phonenumbers library; normalise to E.164 on success.
     # Defaults to GB if no country code is provided.
     if not field.data:
         return
+
     try:
         parsed = phonenumbers.parse(field.data, "GB")
     except phonenumbers.NumberParseException:
-        raise ValidationError("Enter a valid phone number (e.g. +44 7700 900001 or 07700 900001).")
-    if not phonenumbers.is_valid_number(parsed):
-        raise ValidationError("That doesn't look like a valid phone number.")
-    # Normalise to E.164 so we store it consistently
+        raise ValidationError("Enter a valid phone number, e.g. 07700 900001.")
+
+    if not phonenumbers.is_valid_number(parsed) and not _is_demo_uk_mobile(parsed):
+        raise ValidationError("Enter a valid UK phone number or a 07700 900xxx demo number.")
+
+    # Normalise to E.164 so we store it consistently.
     field.data = phonenumbers.format_number(parsed, phonenumbers.PhoneNumberFormat.E164)
 
 
