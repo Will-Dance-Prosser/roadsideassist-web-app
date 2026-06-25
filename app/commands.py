@@ -73,21 +73,21 @@ DEMO_SOURCE_RECORDS = [
     {"system": "CRM", "external_id": "CRM-006", "first_name": "Emma", "last_name": "Taylor", "email": "emma.taylor@email.com", "phone": "07700 900008", "postcode": "G1 1AA", "date_of_birth": date(1995, 12, 4)},
 
     # Web Portal records — near-duplicates of CRM records to demonstrate matching
-    {"system": "Web Portal", "external_id": "WEB-001", "first_name": "J.", "last_name": "Smith", "email": "j.smith@email.com", "phone": "07700 900001", "postcode": "SW1A 1AA", "date_of_birth": date(1980, 4, 12)},
+    {"system": "Web Portal", "external_id": "WEB-001", "first_name": "J.", "last_name": "Smith", "email": "j.smith@email.com", "phone": None, "postcode": "SW1A 1AA", "date_of_birth": date(1980, 4, 12)},
     {"system": "Web Portal", "external_id": "WEB-002", "first_name": "Pat", "last_name": "Patel", "email": "p.patel@email.com", "phone": "07700 900002", "postcode": "M1 1AE", "date_of_birth": date(1975, 9, 3)},
     {"system": "Web Portal", "external_id": "WEB-003", "first_name": "Laura", "last_name": "Williams", "email": "l.williams@email.com", "phone": "07700 900005", "postcode": "LS1 1BA", "date_of_birth": date(1993, 3, 8)},
-    {"system": "Web Portal", "external_id": "WEB-004", "first_name": "Mike", "last_name": "Owen", "email": "m.owen@email.com", "phone": "07700 900007", "postcode": "CF10 1EP", "date_of_birth": date(1982, 6, 18)},
-    {"system": "Web Portal", "external_id": "WEB-005", "first_name": "E.", "last_name": "Taylor", "email": "emma.taylor@email.com", "phone": "07700 900008", "postcode": "G1 1AA", "date_of_birth": date(1995, 12, 4)},
+    {"system": "Web Portal", "external_id": "WEB-004", "first_name": "Mike", "last_name": "Owen", "email": None, "phone": "07700 900007", "postcode": "CF10 1EP", "date_of_birth": date(1982, 6, 18)},
+    {"system": "Web Portal", "external_id": "WEB-005", "first_name": "E.", "last_name": "Taylor", "email": None, "phone": "07700 900008", "postcode": "G1 1AA", "date_of_birth": date(1995, 12, 4)},
 
     # Legacy Membership records
-    {"system": "Legacy Membership", "external_id": "LEG-001", "first_name": "C.", "last_name": "Johnson", "email": "cjohnson@oldmail.com", "phone": "07700 900003", "postcode": "B1 1BB", "date_of_birth": date(1990, 1, 22)},
-    {"system": "Legacy Membership", "external_id": "LEG-002", "first_name": "Sara", "last_name": "Ahmad", "email": "s.ahmed@email.com", "phone": "07700 900004", "postcode": "E1 6AN", "date_of_birth": date(1988, 7, 15)},
+    {"system": "Legacy Membership", "external_id": "LEG-001", "first_name": "C.", "last_name": "Johnson", "email": "cjohnson@oldmail.example", "phone": "07700 900003", "postcode": "B1 1BB", "date_of_birth": date(1990, 1, 22)},
+    {"system": "Legacy Membership", "external_id": "LEG-002", "first_name": "Sara", "last_name": "Ahmad", "email": "s.ahmad@legacy.example", "phone": "07700 900004", "postcode": "E1 6AN", "date_of_birth": date(1988, 7, 15)},
     {"system": "Legacy Membership", "external_id": "LEG-003", "first_name": "Robert", "last_name": "Brown", "email": "r.brown@email.com", "phone": "07700 900006", "postcode": "EH1 1YZ", "date_of_birth": date(1965, 11, 30)},
-    {"system": "Legacy Membership", "external_id": "LEG-004", "first_name": "Michael", "last_name": "Owens", "email": "michael.owen@oldmail.com", "phone": "07700 900007", "postcode": "CF10 1EP", "date_of_birth": date(1982, 6, 18)},
+    {"system": "Legacy Membership", "external_id": "LEG-004", "first_name": "Michael", "last_name": "Owens", "email": "michael.owen@oldmail.example", "phone": "07700 900007", "postcode": "CF10 1EP", "date_of_birth": date(1982, 6, 18)},
 
-    # Vehicle Records
+    # Vehicle Records — limited contact data to make matching less perfect
     {"system": "Vehicle Records", "external_id": "VEH-001", "first_name": "John", "last_name": "Smith", "email": None, "phone": None, "postcode": "SW1A 1AA", "date_of_birth": date(1980, 4, 12)},
-    {"system": "Vehicle Records", "external_id": "VEH-002", "first_name": "Laura", "last_name": "Williams", "email": "l.williams@email.com", "phone": "07700 900005", "postcode": "LS1 1BA", "date_of_birth": date(1993, 3, 8)},
+    {"system": "Vehicle Records", "external_id": "VEH-002", "first_name": "Laura", "last_name": "Williams", "email": None, "phone": "07700 900005", "postcode": "LS1 1BA", "date_of_birth": date(1993, 3, 8)},
     {"system": "Vehicle Records", "external_id": "VEH-003", "first_name": "Emma", "last_name": "Taylor", "email": None, "phone": None, "postcode": "G1 1AA", "date_of_birth": date(1995, 12, 4)},
 ]
 
