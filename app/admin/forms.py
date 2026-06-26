@@ -1,7 +1,7 @@
 import re
 from flask_wtf import FlaskForm
 from wtforms import BooleanField, PasswordField, SelectField, StringField, SubmitField
-from wtforms.validators import DataRequired, EqualTo, Length, ValidationError
+from wtforms.validators import DataRequired, EqualTo, Length, Regexp, ValidationError
 
 
 def _simple_email(form, field):
@@ -10,7 +10,11 @@ def _simple_email(form, field):
 
 
 class CreateUserForm(FlaskForm):
-    username = StringField("Username", validators=[DataRequired(), Length(max=64)])
+    username = StringField("Username", validators=[
+        DataRequired(),
+        Length(max=64),
+        Regexp(r'^[a-zA-Z0-9_\-]+$', message="Username may only contain letters, numbers, hyphens, and underscores."),
+    ])
     email = StringField("Email", validators=[DataRequired(), Length(max=120), _simple_email])
     password = PasswordField(
         "Password",
