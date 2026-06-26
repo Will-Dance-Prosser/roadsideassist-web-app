@@ -54,6 +54,9 @@ def approve(id):
         return redirect(url_for("match_queue.detail", id=id))
 
     primary = request.form.get("primary_record", "a")
+    if primary not in ("a", "b"):
+        flash("Invalid primary record selection.", "danger")
+        return redirect(url_for("match_queue.detail", id=id))
     if primary == "b":
         base, other = candidate.record_b, candidate.record_a
     else:

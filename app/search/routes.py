@@ -25,7 +25,7 @@ def _parse_candidate_id(q):
 @login_required
 def index():
     # Handle the global search — searches source records, match candidates, and golden records
-    q = request.args.get("q", "").strip()
+    q = request.args.get("q", "").strip()[:500]
 
     if not q:
         # nothing typed yet, just show the empty search page
