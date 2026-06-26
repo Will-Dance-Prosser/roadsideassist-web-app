@@ -65,12 +65,15 @@ def explain_postcode(rec_a, rec_b):
 
 
 def explain_phone(rec_a, rec_b):
-    # Strip everything except digits before comparing
-    # TODO: could +44 prefix stripping be handled here???
+    # Strip everything except digits and normalise UK numbers before comparing
     def digits(v):
         if v is None:
             return None
-        return "".join(ch for ch in v if ch.isdigit())
+        d = "".join(ch for ch in v if ch.isdigit())
+        # UK local mobile/landline → international: 07... → 447...
+        if d.startswith("0") and len(d) == 11:
+            d = "44" + d[1:]
+        return d
 
     a, b = digits(rec_a.phone), digits(rec_b.phone)
     if a is None or b is None:
