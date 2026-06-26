@@ -3,7 +3,7 @@ from flask import Blueprint, render_template, abort, redirect, url_for, flash, r
 from flask_login import current_user
 from app.auth.decorators import role_required
 from app.extensions import db
-from app.models import AuditLog, GoldenRecord, GoldenRecordLink, MatchCandidate, MergeDecision
+from app.models import AuditLog, GoldenRecord, GoldenRecordLink, MatchCandidate, MergeDecision, SourceRecord
 from app.match_queue.explain import build_explanation
 
 
@@ -15,7 +15,16 @@ match_queue_bp = Blueprint("match_queue", __name__)
 @role_required("administrator", "data_steward", "data_analyst")
 def index():
     # lists the pending match candidates by match score descending
-    candidates = (MatchCandidate.query.filter_by(status="pending").order_by(MatchCandidate.match_score.desc()).all())
+    # exclude candidates where either source record has been archived
+    archived_ids = db.session.query(SourceRecord.id).filter(SourceRecord.is_archived == True).scalar_subquery()  # noqa: E712
+    candidates = (
+        MatchCandidate.query
+        .filter_by(status="pending")
+        .filter(~MatchCandidate.record_a_id.in_(archived_ids))
+        .filter(~MatchCandidate.record_b_id.in_(archived_ids))
+        .order_by(MatchCandidate.match_score.desc())
+        .all()
+    )
     return render_template("match_queue/index.html", candidates=candidates)
 
 

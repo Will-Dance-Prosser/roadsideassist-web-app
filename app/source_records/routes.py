@@ -221,6 +221,22 @@ def archive(id):
     else:
         record.is_archived = True
         record.archived_at = datetime.utcnow()
+
+        # Remove pending match candidates involving this record
+        pending_candidates = MatchCandidate.query.filter(
+            MatchCandidate.status == "pending",
+            (MatchCandidate.record_a_id == record.id) | (MatchCandidate.record_b_id == record.id),
+        ).all()
+        for candidate in pending_candidates:
+            candidate.status = "rejected"
+            db.session.add(AuditLog(
+                user_id=current_user.id,
+                action="match_candidate_auto_rejected",
+                target_type="match_candidate",
+                target_id=candidate.id,
+                detail=f"MC-{candidate.id:04d} auto-rejected: source record {record.external_id} archived.",
+            ))
+
         db.session.add(AuditLog(
             user_id=current_user.id,
             action="source_record_archived",
