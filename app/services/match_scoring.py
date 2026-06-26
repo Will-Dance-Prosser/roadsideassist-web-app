@@ -15,10 +15,18 @@ REVIEW_THRESHOLD = 0.60
 
 
 def _digits(value):
-    """Return only digit characters from a string."""
+    """Return only digit characters from a string, normalising UK numbers.
+
+    Converts local UK format (07...) to international (447...) so that
+    '07700 900004' and '+447700900004' produce the same digit string.
+    """
     if not value:
         return None
-    return "".join(ch for ch in str(value) if ch.isdigit())
+    digits = "".join(ch for ch in str(value) if ch.isdigit())
+    # UK local mobile/landline → international: 07... → 447...
+    if digits.startswith("0") and len(digits) == 11:
+        digits = "44" + digits[1:]
+    return digits
 
 
 def _normalise(value):
