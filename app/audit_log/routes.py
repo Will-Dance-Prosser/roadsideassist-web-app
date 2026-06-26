@@ -10,12 +10,12 @@ PAGE_SIZE = 20
 @audit_log_bp.route("/audit-log", methods=["GET"])
 @role_required("administrator")
 def index():
-    q           = request.args.get("q", "").strip()
+    q           = request.args.get("q", "").strip()[:200]
     user_id     = request.args.get("user_id", type=int)
     action      = request.args.get("action", "").strip()
     target_type = request.args.get("target_type", "").strip()
     sort        = request.args.get("sort", "created_desc")
-    page        = request.args.get("page", 1, type=int)
+    page        = max(1, request.args.get("page", 1, type=int))
 
     query = AuditLog.query
 
